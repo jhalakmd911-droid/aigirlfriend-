@@ -20,7 +20,7 @@ export default function Home() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "24px 0",
+            padding: "22px 0 18px",
           }}
         >
           <div>
@@ -28,72 +28,124 @@ export default function Home() {
               className="gradient-text"
               style={{
                 fontFamily: "var(--font-display)",
-                fontSize: "24px",
-                fontWeight: 700,
+                fontSize: "26px",
+                fontWeight: 800,
+                letterSpacing: "-0.6px",
               }}
             >
               AI Girlfriend
             </div>
 
-            <p style={{ marginTop: "4px", fontSize: "14px" }}>
-              Your AI companion
+            <p
+              style={{
+                marginTop: "5px",
+                fontSize: "13px",
+                color: "var(--muted)",
+              }}
+            >
+              Your personal AI companion
             </p>
           </div>
 
-          <div
+          <button
+            type="button"
+            aria-label="Profile"
             style={{
               width: "46px",
               height: "46px",
               borderRadius: "50%",
+              border: "1px solid rgba(255,255,255,0.15)",
               display: "grid",
               placeItems: "center",
               background:
                 "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
               color: "#ffffff",
               fontSize: "22px",
+              boxShadow: "0 10px 30px rgba(139,92,246,0.25)",
             }}
           >
             ♡
-          </div>
+          </button>
         </header>
 
         <section
           className="card"
           style={{
-            padding: "28px 22px",
-            marginTop: "10px",
+            position: "relative",
+            overflow: "hidden",
+            padding: "34px 22px 30px",
             textAlign: "center",
           }}
         >
           <div
             style={{
-              width: "108px",
-              height: "108px",
-              margin: "0 auto 20px",
-              borderRadius: "32px",
+              position: "absolute",
+              width: "180px",
+              height: "180px",
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle, rgba(255,79,154,0.18), transparent 70%)",
+              top: "-80px",
+              left: "-60px",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              width: "180px",
+              height: "180px",
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle, rgba(139,92,246,0.18), transparent 70%)",
+              bottom: "-90px",
+              right: "-60px",
+            }}
+          />
+
+          <div
+            style={{
+              position: "relative",
+              width: "118px",
+              height: "118px",
+              margin: "0 auto 22px",
+              borderRadius: "36px",
               display: "grid",
               placeItems: "center",
               background:
                 "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
               color: "#ffffff",
-              fontSize: "54px",
+              fontSize: "58px",
+              boxShadow:
+                "0 18px 45px rgba(139,92,246,0.30)",
             }}
           >
             ♡
           </div>
 
-          <h1 style={{ fontSize: "30px" }}>
+          <h1
+            style={{
+              position: "relative",
+              fontSize: "30px",
+              lineHeight: 1.15,
+              letterSpacing: "-0.8px",
+            }}
+          >
             Meet your AI companion
           </h1>
 
           <p
             style={{
-              marginTop: "12px",
+              position: "relative",
+              margin: "13px auto 0",
+              maxWidth: "360px",
               fontSize: "15px",
+              lineHeight: 1.6,
+              color: "var(--muted)",
             }}
           >
-            Chat, talk, and spend time with a friendly AI companion
-            designed to feel natural and personal.
+            Chat, talk, and spend time with a friendly AI
+            companion that feels natural and personal.
           </p>
 
           <button
@@ -101,9 +153,13 @@ export default function Home() {
             className="btn btn-primary"
             onClick={() => setActiveTab("chat")}
             style={{
-              marginTop: "24px",
+              position: "relative",
+              marginTop: "26px",
               width: "100%",
               maxWidth: "320px",
+              minHeight: "52px",
+              fontSize: "15px",
+              fontWeight: 700,
             }}
           >
             Start chatting
@@ -116,7 +172,7 @@ export default function Home() {
             gridTemplateColumns:
               "repeat(2, minmax(0, 1fr))",
             gap: "12px",
-            marginTop: "16px",
+            marginTop: "14px",
           }}
         >
           <button
@@ -131,19 +187,29 @@ export default function Home() {
           >
             <div
               style={{
-                fontSize: "28px",
-                marginBottom: "8px",
+                width: "42px",
+                height: "42px",
+                borderRadius: "14px",
+                display: "grid",
+                placeItems: "center",
+                background:
+                  "rgba(255,79,154,0.12)",
+                fontSize: "24px",
+                marginBottom: "12px",
               }}
             >
               ♡
             </div>
 
-            <strong>Chat</strong>
+            <strong style={{ fontSize: "16px" }}>
+              Chat
+            </strong>
 
             <p
               style={{
                 fontSize: "13px",
-                marginTop: "4px",
+                marginTop: "5px",
+                color: "var(--muted)",
               }}
             >
               Have a conversation
@@ -162,19 +228,29 @@ export default function Home() {
           >
             <div
               style={{
-                fontSize: "28px",
-                marginBottom: "8px",
+                width: "42px",
+                height: "42px",
+                borderRadius: "14px",
+                display: "grid",
+                placeItems: "center",
+                background:
+                  "rgba(139,92,246,0.12)",
+                fontSize: "24px",
+                marginBottom: "12px",
               }}
             >
               ◉
             </div>
 
-            <strong>Voice</strong>
+            <strong style={{ fontSize: "16px" }}>
+              Voice
+            </strong>
 
             <p
               style={{
                 fontSize: "13px",
-                marginTop: "4px",
+                marginTop: "5px",
+                color: "var(--muted)",
               }}
             >
               Talk naturally
@@ -185,22 +261,24 @@ export default function Home() {
         <section
           className="card"
           style={{
-            marginTop: "16px",
-            padding: "20px",
+            marginTop: "14px",
+            padding: "21px",
           }}
         >
-          <h2 style={{ fontSize: "20px" }}>
+          <h2 style={{ fontSize: "19px" }}>
             Your companion
           </h2>
 
           <p
             style={{
-              marginTop: "8px",
+              marginTop: "7px",
               fontSize: "14px",
+              lineHeight: 1.55,
+              color: "var(--muted)",
             }}
           >
             Your conversations and preferences can become
-            more personal as the app grows.
+            more personal as your companion gets to know you.
           </p>
         </section>
 
@@ -209,14 +287,14 @@ export default function Home() {
           className="glass"
           style={{
             position: "sticky",
-            bottom: "16px",
+            bottom: "12px",
             zIndex: 20,
             display: "grid",
             gridTemplateColumns:
               "repeat(4, 1fr)",
             gap: "4px",
-            marginTop: "24px",
-            padding: "8px",
+            marginTop: "20px",
+            padding: "7px",
             borderRadius: "20px",
           }}
         >
@@ -233,7 +311,7 @@ export default function Home() {
                 }
                 style={{
                   minHeight: "58px",
-                  borderRadius: "14px",
+                  borderRadius: "15px",
                   background: isActive
                     ? "linear-gradient(135deg, #FF4F9A, #8B5CF6)"
                     : "transparent",
@@ -245,13 +323,10 @@ export default function Home() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "3px",
+                  transition: "all 0.2s ease",
                 }}
               >
-                <span
-                  style={{
-                    fontSize: "20px",
-                  }}
-                >
+                <span style={{ fontSize: "20px" }}>
                   {item.icon}
                 </span>
 
