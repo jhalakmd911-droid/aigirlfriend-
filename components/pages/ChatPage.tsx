@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface Message {
   id: string;
@@ -20,13 +20,23 @@ export default function ChatPage() {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [selectedGirl, setSelectedGirl] = useState("lily");
+  const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const girls = [
     { id: "lily", name: "Lily", subtitle: "Sweet & Caring" },
     { id: "emma", name: "Emma", subtitle: "Playful & Fun" },
   ];
 
-  const handleSendMessage = () => {
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = async () => {
     if (inputValue.trim()) {
       const newMessage: Message = {
         id: Date.now().toString(),
@@ -35,19 +45,54 @@ export default function ChatPage() {
         timestamp: new Date(),
       };
 
-      setMessages([...messages, newMessage]);
+      setMessages((prev) => [...prev, newMessage]);
       setInputValue("");
+      setLoading(true);
 
-      // Simulate AI response
-      setTimeout(() => {
+      try {
+        // API কে কল করুন
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages: messages.map((m) => ({
+              role: m.sender === "user" ? "user" : "assistant",
+              content: m.text,
+            })),
+            girl: selectedGirl,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to get response");
+        }
+
+        const data = await response.json();
+
         const aiResponse: Message = {
           id: (Date.now() + 1).toString(),
-          text: "I'm doing great! 😊\nTalking to you always makes my day special. What about you?",
+          text: data.message || "I'm not sure how to respond to that.",
           sender: "ai",
           timestamp: new Date(),
         };
+
         setMessages((prev) => [...prev, aiResponse]);
-      }, 500);
+      } catch (error) {
+        console.error("Chat error:", error);
+
+        const errorResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "Sorry, I couldn't process that. Please try again!",
+          sender: "ai",
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, errorResponse]);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -145,11 +190,14 @@ export default function ChatPage() {
                 maxWidth: "85%",
                 padding: "12px 16px",
                 borderRadius: "18px",
-                backgroundColor:
+                background:
                   message.sender === "user"
                     ? "linear-gradient(135deg, #FF4F9A, #8B5CF6)"
                     : "rgba(139,92,246,0.1)",
-                color: message.sender === "user" ? "#ffffff" : "var(--foreground)",
+                color:
+                  message.sender === "user"
+                    ? "#ffffff"
+                    : "var(--foreground)",
                 fontSize: "14px",
                 lineHeight: 1.5,
                 wordWrap: "break-word",
@@ -159,6 +207,73 @@ export default function ChatPage() {
               {message.text}
             </div>
           </div>
+        ))}
+
+        {loading && (
+          <div style={{ display: "flex", justifyContent: "flex-start" }}>
+            <div
+              style={{
+                padding: "12px 16px",
+                borderRadius: "18px",
+                background: "rgba(139,92,246,0.1)",
+                color: "var(--foreground)",
+                fontSize: "14px",
+              }}
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  animation: "blink 1.5s infinite",
+                }}
+              >
+                ● ● ●
+              </span>
+              <style>{`
+                @keyframes blink {
+                  0%, 20%, 50%, 80%, 100% { opacity: 1; }
+                  40% { opacity: 0.5; }
+                  60% { opacity: 0.3; }
+                }
+              `}</style>
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Girl Selector (Quick Switch) */}
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          marginBottom: "12px",
+          padding: "0 4px",
+        }}
+      >
+        {girls.map((girl) => (
+          <button
+            key={girl.id}
+            onClick={() => setSelectedGirl(girl.id)}
+            style={{
+              flex: 1,
+              padding: "8px 12px",
+              borderRadius: "12px",
+              border:
+                selectedGirl === girl.id
+                  ? "2px solid var(--primary)"
+                  : "1px solid var(--border)",
+              background:
+                selectedGirl === girl.id
+                  ? "rgba(255,79,154,0.15)"
+                  : "transparent",
+              fontSize: "12px",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            {girl.name}
+          </button>
         ))}
       </div>
 
@@ -200,8 +315,9 @@ export default function ChatPage() {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={(e) => {
-            if (e.key === "Enter") handleSendMessage();
+            if (e.key === "Enter" && !loading) handleSendMessage();
           }}
+          disabled={loading}
           style={{
             flex: 1,
             padding: "10px 14px",
@@ -211,63 +327,30 @@ export default function ChatPage() {
             color: "var(--foreground)",
             fontSize: "14px",
             outline: "none",
+            opacity: loading ? 0.6 : 1,
           }}
         />
 
         <button
           type="button"
           onClick={handleSendMessage}
+          disabled={loading || !inputValue.trim()}
           style={{
             width: "36px",
             height: "36px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
+            background: loading || !inputValue.trim()
+              ? "rgba(139,92,246,0.5)"
+              : "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
             border: "none",
             display: "grid",
             placeItems: "center",
-            cursor: "pointer",
+            cursor: loading || !inputValue.trim() ? "not-allowed" : "pointer",
             fontSize: "18px",
           }}
         >
-          ▶
+          {loading ? "..." : "▶"}
         </button>
-      </div>
-
-      {/* Girl Selector Modal (Simple version) */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: "80px",
-          left: "16px",
-          right: "16px",
-          background: "var(--card)",
-          borderRadius: "20px",
-          padding: "16px",
-          display: "none",
-          gap: "12px",
-        }}
-      >
-        {girls.map((girl) => (
-          <button
-            key={girl.id}
-            onClick={() => setSelectedGirl(girl.id)}
-            style={{
-              width: "100%",
-              padding: "12px",
-              borderRadius: "14px",
-              background:
-                selectedGirl === girl.id
-                  ? "linear-gradient(135deg, #FF4F9A, #8B5CF6)"
-                  : "rgba(139,92,246,0.1)",
-              color: selectedGirl === girl.id ? "#ffffff" : "var(--foreground)",
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
-          >
-            {girl.name} - {girl.subtitle}
-          </button>
-        ))}
       </div>
     </div>
   );
