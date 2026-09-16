@@ -1,20 +1,21 @@
 {
-  "name": "my-project",
+  "name": "ai-project",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@12.3.4",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "@base-ui/react": "^1.5.0",
-    "@vercel/analytics": "1.6.1",
+    "@base-ui/react": "^1.0.0",
+    "@vercel/analytics": "^1.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.16.0",
-    "next": "16.3.3",
+    "lucide-react": "^1.10.0",
+    "next": "10.3.3",
     "react": "^19",
     "react-dom": "^19",
     "shadcn": "^4.11.0",
@@ -28,6 +29,6 @@
     "@types/react-dom": "^19",
     "postcss": "^8.5",
     "tailwindcss": "^4.3.3",
-    "typescript": "5.7.3"
+    "typescript": "^5.7.3"
   }
 }
