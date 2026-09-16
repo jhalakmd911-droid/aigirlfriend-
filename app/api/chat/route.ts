@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const OPENROUTER_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY || '';
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
-interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
+const OPENROUTER_API_KEY = process.env.OPENAI_API_KEY;
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,25 +16,26 @@ export async function POST(request: NextRequest) {
     }
 
     let systemMessage = 'You are Lily, a sweet and caring AI girlfriend.';
+
     if (girl === 'emma') {
       systemMessage = 'You are Emma, a playful and fun AI girlfriend.';
     }
 
-    const formattedMessages: ChatMessage[] = [
+    const formattedMessages = [
       { role: 'system', content: systemMessage },
-      ...(messages || []).map((msg: any) => ({
-        role: msg.sender === 'user' ? 'user' : 'assistant',
-        content: msg.text,
-      })),
+      ...messages.map((m: any) => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text,
+      }))
     ];
 
-    const response = await fetch(OPENROUTER_URL, {
+    const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'HTTP-Referer': 'https://github.com/jhalakmd911-droid/aigirlfriend',
-        'X-Title': 'AI Girlfriend',
+        'X-Title': 'AI Girlfriend'
       },
       body: JSON.stringify({
         model: 'openai/gpt-3.5-turbo',
@@ -60,12 +56,13 @@ export async function POST(request: NextRequest) {
     }
 
     const reply = data.choices?.[0]?.message?.content || 'No response generated.';
-    return NextResponse.json({ reply });
 
-  } catch (error: any) {
-    console.error('Server error:', error);
+    return NextResponse.json({ success: true, message: reply });
+
+  } catch (error) {
+    console.error('API Route Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }
