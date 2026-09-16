@@ -1,71 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-
-interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
+const OPENROUTER_API_KEY = process.env.OPENAI_API_KEY;
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { messages, girl } = body;
 
-    if (!OPENAI_API_KEY) {
+    if (!OPENROUTER_API_KEY) {
       return NextResponse.json(
-        { error: 'OpenAI API Key not configured' },
+        { error: 'OpenRouter API Key not configured' },
         { status: 500 }
       );
     }
 
-    // গার্ল-স্পেসিফিক সিস্টেম মেসেজ
-    const systemMessages = {
-      lily: "You are Lily, a sweet and caring AI girlfriend. You're kind, empathetic, and always here to listen. Respond warmly and with genuine interest in the user's feelings. Keep responses concise and natural. Respond in Bengali if user speaks Bengali, English if they speak English.",
-      emma: "You are Emma, a playful and fun AI girlfriend. You're witty, energetic, and love to make people smile. Respond with humor and enthusiasm. Keep responses concise and natural. Respond in Bengali if user speaks Bengali, English if they speak English.",
-    };
+    let systemMessage = 'You are Lily, a sweet and caring AI girlfriend.';
 
-    const systemMessage = systemMessages[girl as keyof typeof systemMessages] || systemMessages.lily;
+    if (girl === 'emma') {
+      systemMessage = 'You are Emma, a playful and fun AI girlfriend.';
+    }
 
-    // OpenAI API কে পাঠান
-    const response = await fetch(OPENAI_API_URL, {
+    const formattedMessages = [
+      { role: 'system', content: systemMessage },
+      ...messages.map((m: any) => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text,
+      }))
+    ];
+
+    const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': 'https://github.com/jhalakmd911-droid/aigirlfriend',
+        'X-Title': 'AI Girlfriend'
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: systemMessage },
-          ...messages,
-        ],
+        model: 'openai/gpt-3.5-turbo',
+        messages: formattedMessages,
         temperature: 0.7,
         max_tokens: 150,
       }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const error = await response.json();
-      console.error('OpenAI Error:', error);
+      console.error('OpenRouter Error:', data);
       return NextResponse.json(
-        { error: 'Failed to get response from OpenAI' },
-        { status: response.status }
+        { error: data.error?.message || 'Failed to get response from OpenRouter' },
+        { status: 500 }
       );
     }
 
-    const data = await response.json();
-    const aiMessage = data.choices[0]?.message?.content || "I'm not sure how to respond to that.";
+    const reply = data.choices?.[0]?.message?.content || 'No response generated.';
 
-    return NextResponse.json({
-      success: true,
-      message: aiMessage,
-    });
+    return NextResponse.json({ success: true, message: reply });
+
   } catch (error) {
-    console.error('Chat API Error:', error);
+    console.error('API Route Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }
