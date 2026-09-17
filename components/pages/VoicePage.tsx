@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 
-type VoiceState = "idle" | "listening" | "speaking" | "playing-music";
+type VoiceState = "idle" | "listening" | "speaking";
 
 export default function VoicePage() {
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
   const [selectedGirl, setSelectedGirl] = useState("lily");
-  const [isListening, setIsListening] = useState(false);
   const [volume, setVolume] = useState(70);
 
   const girls = [
@@ -16,15 +15,13 @@ export default function VoicePage() {
   ];
 
   const toggleListening = () => {
-    setIsListening(!isListening);
-    if (!isListening) {
+    if (voiceState === "idle") {
       setVoiceState("listening");
       setTimeout(() => {
         setVoiceState("speaking");
         setTimeout(() => {
           setVoiceState("idle");
-          setIsListening(false);
-        }, 3000);
+        }, 2500);
       }, 2000);
     } else {
       setVoiceState("idle");
@@ -73,28 +70,9 @@ export default function VoicePage() {
             Choose your AI girl and talk
           </p>
         </div>
-
-        <button
-          type="button"
-          style={{
-            width: "46px",
-            height: "46px",
-            borderRadius: "50%",
-            border: "1px solid rgba(255,255,255,0.15)",
-            display: "grid",
-            placeItems: "center",
-            background: "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
-            color: "#ffffff",
-            fontSize: "22px",
-            boxShadow: "0 10px 30px rgba(139,92,246,0.25)",
-            cursor: "pointer",
-          }}
-        >
-          ⚙
-        </button>
       </header>
 
-      {/* Girl Selection Cards */}
+      {/* Girl Selection */}
       <section
         style={{
           display: "grid",
@@ -115,9 +93,13 @@ export default function VoicePage() {
               cursor: "pointer",
               border:
                 selectedGirl === girl.id
-                  ? "2px solid var(--primary)"
+                  ? "2px solid #FF2D95"
                   : "1px solid var(--border)",
               position: "relative",
+              boxShadow:
+                selectedGirl === girl.id
+                  ? "0 0 24px rgba(255,45,149,0.45)"
+                  : "none",
             }}
           >
             <div
@@ -125,21 +107,20 @@ export default function VoicePage() {
                 width: "80px",
                 height: "80px",
                 borderRadius: "50%",
-                background: "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
+                background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
                 display: "grid",
                 placeItems: "center",
                 color: "#ffffff",
-                fontSize: "48px",
+                fontSize: "42px",
                 margin: "0 auto 12px",
+                boxShadow: "0 0 22px rgba(255,45,149,0.5)",
               }}
             >
               {girl.icon}
             </div>
-
-            <h3 style={{ fontSize: "16px", fontWeight: 600 }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#fff" }}>
               {girl.name}
             </h3>
-
             <p
               style={{
                 fontSize: "12px",
@@ -149,7 +130,6 @@ export default function VoicePage() {
             >
               {girl.subtitle}
             </p>
-
             {selectedGirl === girl.id && (
               <div
                 style={{
@@ -159,11 +139,12 @@ export default function VoicePage() {
                   width: "24px",
                   height: "24px",
                   borderRadius: "50%",
-                  background: "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
+                  background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
                   display: "grid",
                   placeItems: "center",
                   color: "#ffffff",
-                  fontSize: "14px",
+                  fontSize: "13px",
+                  boxShadow: "0 0 12px rgba(255,45,149,0.6)",
                 }}
               >
                 ✓
@@ -190,12 +171,11 @@ export default function VoicePage() {
             height: "200px",
             borderRadius: "50%",
             background:
-              "radial-gradient(circle, rgba(255,79,154,0.15), transparent 70%)",
+              "radial-gradient(circle, rgba(255,45,149,0.18), transparent 70%)",
             top: "-80px",
             left: "-60px",
           }}
         />
-
         <div
           style={{
             position: "absolute",
@@ -203,20 +183,25 @@ export default function VoicePage() {
             height: "200px",
             borderRadius: "50%",
             background:
-              "radial-gradient(circle, rgba(139,92,246,0.15), transparent 70%)",
+              "radial-gradient(circle, rgba(139,92,246,0.18), transparent 70%)",
             bottom: "-100px",
             right: "-60px",
           }}
         />
 
-        <h2 style={{ fontSize: "20px", marginBottom: "24px", position: "relative" }}>
+        <h2
+          style={{
+            fontSize: "20px",
+            marginBottom: "24px",
+            position: "relative",
+            color: "#fff",
+          }}
+        >
           {voiceState === "idle" && "Tap to speak"}
           {voiceState === "listening" && "Listening..."}
           {voiceState === "speaking" && "Speaking..."}
-          {voiceState === "playing-music" && "Playing music"}
         </h2>
 
-        {/* Main Voice Button */}
         <div style={{ position: "relative", marginBottom: "32px" }}>
           <button
             onClick={toggleListening}
@@ -224,28 +209,33 @@ export default function VoicePage() {
               width: "160px",
               height: "160px",
               borderRadius: "50%",
-              background: isListening
-                ? "linear-gradient(135deg, #FF4F9A, #8B5CF6)"
-                : "rgba(139,92,246,0.15)",
-              border: "none",
+              background:
+                voiceState !== "idle"
+                  ? "linear-gradient(135deg, #FF2D95, #8B5CF6)"
+                  : "rgba(139,92,246,0.18)",
+              border:
+                voiceState !== "idle"
+                  ? "2px solid rgba(255,45,149,0.6)"
+                  : "2px solid rgba(139,92,246,0.35)",
               display: "grid",
               placeItems: "center",
               margin: "0 auto",
               cursor: "pointer",
-              fontSize: "72px",
+              fontSize: "64px",
               transition: "all 0.3s ease",
-              boxShadow: isListening
-                ? "0 20px 60px rgba(255,79,154,0.35)"
-                : "0 10px 30px rgba(139,92,246,0.15)",
+              boxShadow:
+                voiceState !== "idle"
+                  ? "0 0 60px rgba(255,45,149,0.6)"
+                  : "0 10px 30px rgba(139,92,246,0.2)",
               position: "relative",
               zIndex: 1,
+              color: "#fff",
             }}
           >
             🎤
           </button>
 
-          {/* Listening animation */}
-          {isListening && (
+          {voiceState === "listening" && (
             <>
               <div
                 style={{
@@ -253,7 +243,7 @@ export default function VoicePage() {
                   width: "180px",
                   height: "180px",
                   borderRadius: "50%",
-                  border: "2px solid rgba(255,79,154,0.3)",
+                  border: "2px solid rgba(255,45,149,0.5)",
                   top: "50%",
                   left: "50%",
                   transform: "translate(-50%, -50%)",
@@ -266,7 +256,7 @@ export default function VoicePage() {
                   width: "200px",
                   height: "200px",
                   borderRadius: "50%",
-                  border: "2px solid rgba(255,79,154,0.15)",
+                  border: "2px solid rgba(255,45,149,0.25)",
                   top: "50%",
                   left: "50%",
                   transform: "translate(-50%, -50%)",
@@ -275,24 +265,22 @@ export default function VoicePage() {
               />
             </>
           )}
+
+          <style>{`
+            @keyframes pulse {
+              0% { width: 160px; height: 160px; opacity: 1; }
+              100% { width: 260px; height: 260px; opacity: 0; }
+            }
+          `}</style>
         </div>
 
-        <style>{`
-          @keyframes pulse {
-            0% {
-              width: 180px;
-              height: 180px;
-              opacity: 1;
-            }
-            100% {
-              width: 240px;
-              height: 240px;
-              opacity: 0;
-            }
-          }
-        `}</style>
-
-        <p style={{ fontSize: "14px", color: "var(--muted)", position: "relative" }}>
+        <p
+          style={{
+            fontSize: "14px",
+            color: "var(--muted)",
+            position: "relative",
+          }}
+        >
           {voiceState === "idle" && "Tap the microphone to start speaking"}
           {voiceState === "listening" && "I'm listening to you..."}
           {voiceState === "speaking" && "I'm responding to you..."}
@@ -301,17 +289,11 @@ export default function VoicePage() {
 
       {/* Music Controls */}
       <section className="card" style={{ padding: "20px", marginTop: "16px" }}>
-        <h3 style={{ fontSize: "16px", marginBottom: "16px" }}>
+        <h3 style={{ fontSize: "16px", marginBottom: "16px", color: "#fff" }}>
           🎵 Background Music
         </h3>
 
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            marginBottom: "16px",
-          }}
-        >
+        <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
           {["Calm", "Lofi", "Ambient", "Jazz"].map((genre) => (
             <button
               key={genre}
@@ -319,10 +301,11 @@ export default function VoicePage() {
                 flex: 1,
                 padding: "8px",
                 borderRadius: "8px",
-                border: "1px solid var(--border)",
-                background: "rgba(139,92,246,0.1)",
+                border: "1px solid rgba(139,92,246,0.3)",
+                background: "rgba(139,92,246,0.12)",
                 fontSize: "12px",
                 cursor: "pointer",
+                color: "#fff",
                 transition: "all 0.2s ease",
               }}
             >
@@ -331,7 +314,6 @@ export default function VoicePage() {
           ))}
         </div>
 
-        {/* Volume Control */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <span style={{ fontSize: "14px" }}>🔊</span>
           <input
@@ -340,10 +322,7 @@ export default function VoicePage() {
             max="100"
             value={volume}
             onChange={(e) => setVolume(Number(e.target.value))}
-            style={{
-              flex: 1,
-              cursor: "pointer",
-            }}
+            style={{ flex: 1, cursor: "pointer" }}
           />
           <span style={{ fontSize: "12px", color: "var(--muted)" }}>
             {volume}%
@@ -353,7 +332,13 @@ export default function VoicePage() {
 
       {/* Tips */}
       <section className="card" style={{ padding: "16px", marginTop: "16px" }}>
-        <p style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--muted)" }}>
+        <p
+          style={{
+            fontSize: "13px",
+            lineHeight: 1.6,
+            color: "var(--muted)",
+          }}
+        >
           💡 <strong>Tip:</strong> Speak clearly for better recognition. You can
           also choose background music to make the conversation more relaxing.
         </p>
