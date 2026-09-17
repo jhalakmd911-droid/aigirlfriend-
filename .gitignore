@@ -32,3 +32,21 @@ google-services.json
 
 # Android Profiling
 *.hprof
+# Next.js / Node
+node_modules/
+.next/
+out/
+build/
+.DS_Store
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
