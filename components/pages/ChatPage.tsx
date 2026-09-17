@@ -24,75 +24,67 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const girls = [
-    { id: "lily", name: "Lily", subtitle: "Sweet & Caring" },
-    { id: "emma", name: "Emma", subtitle: "Playful & Fun" },
+    { id: "lily", name: "Lily", icon: "🎀" },
+    { id: "emma", name: "Emma", icon: "✨" },
   ];
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (inputValue.trim()) {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: inputValue,
-        sender: "user",
+    const text = inputValue.trim();
+    if (!text || loading) return;
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      text,
+      sender: "user",
+      timestamp: new Date(),
+    };
+
+    const historyForApi = [...messages, userMsg].map((m) => ({
+      role: m.sender === "user" ? "user" : "assistant",
+      content: m.text,
+    }));
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInputValue("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: historyForApi,
+          character: selectedGirl,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || "Failed");
+
+      const aiMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        text: data.reply || "Sorry, I couldn't respond.",
+        sender: "ai",
         timestamp: new Date(),
       };
-
-      setMessages((prev) => [...prev, newMessage]);
-      setInputValue("");
-      setLoading(true);
-
-      try {
-        // API কে কল করুন
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            messages: messages.map((m) => ({
-              role: m.sender === "user" ? "user" : "assistant",
-              content: m.text,
-            })),
-            girl: selectedGirl,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to get response");
-        }
-
-        const data = await response.json();
-
-        const aiResponse: Message = {
+      setMessages((prev) => [...prev, aiMsg]);
+    } catch (err: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
           id: (Date.now() + 1).toString(),
-          text: data.message || "I'm not sure how to respond to that.",
+          text: "⚠️ " + (err.message || "Network error. Check API key."),
           sender: "ai",
           timestamp: new Date(),
-        };
-
-        setMessages((prev) => [...prev, aiResponse]);
-      } catch (error) {
-        console.error("Chat error:", error);
-
-        const errorResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          text: "Sorry, I couldn't process that. Please try again!",
-          sender: "ai",
-          timestamp: new Date(),
-        };
-
-        setMessages((prev) => [...prev, errorResponse]);
-      } finally {
-        setLoading(false);
-      }
+        },
+      ]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -106,14 +98,14 @@ export default function ChatPage() {
         paddingBottom: "110px",
       }}
     >
-      {/* Header with Girl Selection */}
+      {/* Header */}
       <header
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 0 16px",
-          borderBottom: "1px solid var(--border)",
+          borderBottom: "1px solid rgba(139,92,246,0.25)",
           marginBottom: "16px",
         }}
       >
@@ -123,26 +115,21 @@ export default function ChatPage() {
               width: "48px",
               height: "48px",
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
+              background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
               display: "grid",
               placeItems: "center",
-              color: "#ffffff",
-              fontSize: "24px",
+              color: "#fff",
+              fontSize: "22px",
+              boxShadow: "0 0 22px rgba(255,45,149,0.55)",
             }}
           >
             {selectedGirl === "lily" ? "🎀" : "✨"}
           </div>
           <div>
-            <h2 style={{ fontSize: "16px", fontWeight: 600 }}>
+            <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#fff" }}>
               {selectedGirl === "lily" ? "Lily" : "Emma"}
             </h2>
-            <p
-              style={{
-                fontSize: "12px",
-                color: "var(--muted)",
-                marginTop: "2px",
-              }}
-            >
+            <p style={{ fontSize: "12px", color: "#22c55e", marginTop: "2px" }}>
               ● Online
             </p>
           </div>
@@ -151,14 +138,15 @@ export default function ChatPage() {
         <button
           type="button"
           style={{
-            width: "36px",
-            height: "36px",
+            width: "38px",
+            height: "38px",
             borderRadius: "50%",
-            background: "transparent",
-            border: "1px solid var(--border)",
+            background: "rgba(139,92,246,0.15)",
+            border: "1px solid rgba(139,92,246,0.35)",
             display: "grid",
             placeItems: "center",
-            cursor: "pointer",
+            color: "#fff",
+            fontSize: "16px",
           }}
         >
           ⋮
@@ -176,35 +164,42 @@ export default function ChatPage() {
           paddingRight: "4px",
         }}
       >
-        {messages.map((message) => (
+        {messages.map((m) => (
           <div
-            key={message.id}
+            key={m.id}
             style={{
               display: "flex",
-              justifyContent:
-                message.sender === "user" ? "flex-end" : "flex-start",
+              justifyContent: m.sender === "user" ? "flex-end" : "flex-start",
             }}
           >
             <div
               style={{
-                maxWidth: "85%",
+                maxWidth: "82%",
                 padding: "12px 16px",
-                borderRadius: "18px",
+                borderRadius:
+                  m.sender === "user"
+                    ? "18px 18px 4px 18px"
+                    : "18px 18px 18px 4px",
                 background:
-                  message.sender === "user"
-                    ? "linear-gradient(135deg, #FF4F9A, #8B5CF6)"
-                    : "rgba(139,92,246,0.1)",
-                color:
-                  message.sender === "user"
-                    ? "#ffffff"
-                    : "var(--foreground)",
+                  m.sender === "user"
+                    ? "linear-gradient(135deg, #FF2D95, #8B5CF6)"
+                    : "rgba(139,92,246,0.16)",
+                border:
+                  m.sender === "user"
+                    ? "1px solid rgba(255,45,149,0.5)"
+                    : "1px solid rgba(139,92,246,0.35)",
+                color: "#fff",
                 fontSize: "14px",
-                lineHeight: 1.5,
+                lineHeight: 1.55,
                 wordWrap: "break-word",
                 whiteSpace: "pre-wrap",
+                boxShadow:
+                  m.sender === "user"
+                    ? "0 8px 22px rgba(255,45,149,0.35)"
+                    : "0 8px 22px rgba(139,92,246,0.22)",
               }}
             >
-              {message.text}
+              {m.text}
             </div>
           </div>
         ))}
@@ -213,28 +208,15 @@ export default function ChatPage() {
           <div style={{ display: "flex", justifyContent: "flex-start" }}>
             <div
               style={{
-                padding: "12px 16px",
-                borderRadius: "18px",
-                background: "rgba(139,92,246,0.1)",
-                color: "var(--foreground)",
+                padding: "12px 18px",
+                borderRadius: "18px 18px 18px 4px",
+                background: "rgba(139,92,246,0.16)",
+                border: "1px solid rgba(139,92,246,0.35)",
+                color: "#c4b5fd",
                 fontSize: "14px",
               }}
             >
-              <span
-                style={{
-                  display: "inline-block",
-                  animation: "blink 1.5s infinite",
-                }}
-              >
-                ● ● ●
-              </span>
-              <style>{`
-                @keyframes blink {
-                  0%, 20%, 50%, 80%, 100% { opacity: 1; }
-                  40% { opacity: 0.5; }
-                  60% { opacity: 0.3; }
-                }
-              `}</style>
+              ● ● ●
             </div>
           </div>
         )}
@@ -242,42 +224,48 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Girl Selector (Quick Switch) */}
+      {/* Girl switch */}
       <div
         style={{
           display: "flex",
           gap: "8px",
           marginBottom: "12px",
+          marginTop: "12px",
           padding: "0 4px",
         }}
       >
-        {girls.map((girl) => (
+        {girls.map((g) => (
           <button
-            key={girl.id}
-            onClick={() => setSelectedGirl(girl.id)}
+            key={g.id}
+            onClick={() => setSelectedGirl(g.id)}
             style={{
               flex: 1,
               padding: "8px 12px",
               borderRadius: "12px",
               border:
-                selectedGirl === girl.id
-                  ? "2px solid var(--primary)"
-                  : "1px solid var(--border)",
+                selectedGirl === g.id
+                  ? "1px solid #FF2D95"
+                  : "1px solid rgba(139,92,246,0.3)",
               background:
-                selectedGirl === girl.id
-                  ? "rgba(255,79,154,0.15)"
-                  : "transparent",
+                selectedGirl === g.id
+                  ? "linear-gradient(135deg, rgba(255,45,149,0.28), rgba(139,92,246,0.28))"
+                  : "rgba(139,92,246,0.10)",
               fontSize: "12px",
+              fontWeight: 700,
+              color: "#fff",
+              boxShadow:
+                selectedGirl === g.id
+                  ? "0 0 16px rgba(255,45,149,0.4)"
+                  : "none",
               cursor: "pointer",
-              fontWeight: 600,
             }}
           >
-            {girl.name}
+            {g.name}
           </button>
         ))}
       </div>
 
-      {/* Input Area */}
+      {/* Input */}
       <div
         style={{
           position: "fixed",
@@ -285,25 +273,24 @@ export default function ChatPage() {
           left: "0",
           right: "0",
           padding: "12px 16px",
-          background: "var(--background)",
-          borderTop: "1px solid var(--border)",
+          background: "rgba(5,1,15,0.92)",
+          backdropFilter: "blur(18px)",
+          borderTop: "1px solid rgba(139,92,246,0.28)",
           display: "flex",
           gap: "8px",
-          alignItems: "flex-end",
+          alignItems: "center",
         }}
       >
         <button
           type="button"
           style={{
-            width: "36px",
-            height: "36px",
+            width: "38px",
+            height: "38px",
             borderRadius: "50%",
             background: "rgba(139,92,246,0.2)",
-            border: "none",
-            display: "grid",
-            placeItems: "center",
-            cursor: "pointer",
-            fontSize: "20px",
+            border: "1px solid rgba(139,92,246,0.35)",
+            color: "#fff",
+            fontSize: "18px",
           }}
         >
           😊
@@ -314,20 +301,19 @@ export default function ChatPage() {
           placeholder="Type a message..."
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          onKeyPress={(e) => {
+          onKeyDown={(e) => {
             if (e.key === "Enter" && !loading) handleSendMessage();
           }}
           disabled={loading}
           style={{
             flex: 1,
-            padding: "10px 14px",
-            borderRadius: "24px",
-            border: "1px solid var(--border)",
-            background: "rgba(255, 255, 255, 0.9)",
-            color: "var(--foreground)",
             fontSize: "14px",
+            padding: "12px 16px",
+            borderRadius: "24px",
+            border: "1px solid rgba(139,92,246,0.3)",
+            background: "rgba(11,4,32,0.65)",
+            color: "#fff",
             outline: "none",
-            opacity: loading ? 0.6 : 1,
           }}
         />
 
@@ -336,17 +322,22 @@ export default function ChatPage() {
           onClick={handleSendMessage}
           disabled={loading || !inputValue.trim()}
           style={{
-            width: "36px",
-            height: "36px",
+            width: "40px",
+            height: "40px",
             borderRadius: "50%",
-            background: loading || !inputValue.trim()
-              ? "rgba(139,92,246,0.5)"
-              : "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
-            border: "none",
+            background:
+              loading || !inputValue.trim()
+                ? "rgba(139,92,246,0.35)"
+                : "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+            color: "#fff",
+            fontSize: "16px",
             display: "grid",
             placeItems: "center",
+            boxShadow:
+              loading || !inputValue.trim()
+                ? "none"
+                : "0 0 18px rgba(255,45,149,0.55)",
             cursor: loading || !inputValue.trim() ? "not-allowed" : "pointer",
-            fontSize: "18px",
           }}
         >
           {loading ? "..." : "▶"}
