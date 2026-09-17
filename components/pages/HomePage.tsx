@@ -36,7 +36,6 @@ export default function HomePage({ onNavigate }: HomePageProps) {
           >
             AI Girlfriend
           </div>
-
           <p
             style={{
               marginTop: "5px",
@@ -55,13 +54,13 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             width: "46px",
             height: "46px",
             borderRadius: "50%",
-            border: "1px solid rgba(255,255,255,0.15)",
+            border: "1px solid rgba(139,92,246,0.35)",
             display: "grid",
             placeItems: "center",
-            background: "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
+            background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
             color: "#ffffff",
             fontSize: "22px",
-            boxShadow: "0 10px 30px rgba(139,92,246,0.25)",
+            boxShadow: "0 10px 30px rgba(255,45,149,0.4)",
             cursor: "pointer",
           }}
         >
@@ -69,7 +68,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         </button>
       </header>
 
-      {/* Main Hero Section */}
+      {/* Hero Section */}
       <section
         className="card"
         style={{
@@ -86,12 +85,11 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             height: "180px",
             borderRadius: "50%",
             background:
-              "radial-gradient(circle, rgba(255,79,154,0.18), transparent 70%)",
+              "radial-gradient(circle, rgba(255,45,149,0.22), transparent 70%)",
             top: "-80px",
             left: "-60px",
           }}
         />
-
         <div
           style={{
             position: "absolute",
@@ -99,7 +97,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             height: "180px",
             borderRadius: "50%",
             background:
-              "radial-gradient(circle, rgba(139,92,246,0.18), transparent 70%)",
+              "radial-gradient(circle, rgba(139,92,246,0.22), transparent 70%)",
             bottom: "-90px",
             right: "-60px",
           }}
@@ -114,10 +112,10 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             borderRadius: "36px",
             display: "grid",
             placeItems: "center",
-            background: "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
+            background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
             color: "#ffffff",
             fontSize: "58px",
-            boxShadow: "0 18px 45px rgba(139,92,246,0.30)",
+            boxShadow: "0 0 45px rgba(255,45,149,0.55)",
           }}
         >
           ♡
@@ -129,6 +127,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             fontSize: "30px",
             lineHeight: 1.15,
             letterSpacing: "-0.8px",
+            color: "#fff",
           }}
         >
           Meet your AI companion
@@ -195,16 +194,15 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               borderRadius: "14px",
               display: "grid",
               placeItems: "center",
-              background: "rgba(255,79,154,0.12)",
+              background: "rgba(255,45,149,0.15)",
               fontSize: "24px",
               marginBottom: "12px",
+              color: "#FF2D95",
             }}
           >
             ♡
           </div>
-
-          <strong style={{ fontSize: "16px" }}>Chat</strong>
-
+          <strong style={{ fontSize: "16px", color: "#fff" }}>Chat</strong>
           <p
             style={{
               fontSize: "13px",
@@ -237,16 +235,15 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               borderRadius: "14px",
               display: "grid",
               placeItems: "center",
-              background: "rgba(139,92,246,0.12)",
+              background: "rgba(139,92,246,0.15)",
               fontSize: "24px",
               marginBottom: "12px",
+              color: "#8B5CF6",
             }}
           >
             ◉
           </div>
-
-          <strong style={{ fontSize: "16px" }}>Voice</strong>
-
+          <strong style={{ fontSize: "16px", color: "#fff" }}>Voice</strong>
           <p
             style={{
               fontSize: "13px",
@@ -259,7 +256,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         </button>
       </section>
 
-      {/* Info Section */}
+      {/* Info */}
       <section
         className="card"
         style={{
@@ -267,8 +264,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
           padding: "21px",
         }}
       >
-        <h2 style={{ fontSize: "19px" }}>Your companion</h2>
-
+        <h2 style={{ fontSize: "19px", color: "#fff" }}>Your companion</h2>
         <p
           style={{
             marginTop: "7px",
