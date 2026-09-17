@@ -1,44 +1,84 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-type UpdateState = "available" | "downloading" | "installing" | "complete";
+interface UpdateInfo {
+  version: string;
+  date: string;
+  message: string;
+  sha: string;
+}
 
 export default function UpdatePage() {
-  const [updateState, setUpdateState] = useState<UpdateState>("available");
-  const [progress, setProgress] = useState(0);
+  const [currentVersion] = useState("1.0.0");
+  const [latestUpdate, setLatestUpdate] = useState<UpdateInfo | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [hasUpdate, setHasUpdate] = useState(false);
+  const [error, setError] = useState("");
 
-  const startUpdate = () => {
-    setUpdateState("downloading");
-    setProgress(0);
+  const REPO = "jhalakmd911-droid/aigirlfriend-";
 
-    // Simulate download progress
-    const downloadInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(downloadInterval);
-          setUpdateState("installing");
-          return 100;
+  useEffect(() => {
+    const checkForUpdates = async () => {
+      try {
+        const res = await fetch(
+          `https://api.github.com/repos/${REPO}/commits?per_page=1`
+        );
+
+        if (!res.ok) throw new Error("GitHub API error");
+
+        const data = await res.json();
+
+        if (data && data.length > 0) {
+          const commit = data[0];
+          const commitDate = new Date(commit.commit.author.date);
+          const lastCheckedKey = "aigirlfriend_last_update_check";
+          const lastChecked = localStorage.getItem(lastCheckedKey);
+
+          const info: UpdateInfo = {
+            version: commit.sha.slice(0, 7),
+            date: commitDate.toLocaleString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            message: commit.commit.message.split("\n")[0],
+            sha: commit.sha,
+          };
+
+          setLatestUpdate(info);
+
+          if (lastChecked !== commit.sha) {
+            setHasUpdate(true);
+          }
         }
-        return prev + 10;
-      });
-    }, 300);
+      } catch (err: any) {
+        setError(err.message || "Failed to check updates");
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    checkForUpdates();
+  }, []);
+
+  const handleUpdate = () => {
+    if (latestUpdate) {
+      localStorage.setItem(
+        "aigirlfriend_last_update_check",
+        latestUpdate.sha
+      );
+    }
+    window.location.reload();
   };
 
-  const completeUpdate = () => {
-    setUpdateState("complete");
-    setTimeout(() => {
-      // Reset to available state
-      setUpdateState("available");
-      setProgress(0);
-    }, 2000);
+  const handleCheckAgain = () => {
+    setChecking(true);
+    setError("");
+    window.location.reload();
   };
-
-  const updates = [
-    { icon: "💬", title: "Better AI responses", desc: "Improved conversation quality" },
-    { icon: "🎙", title: "Improved voice quality", desc: "Crystal clear audio" },
-    { icon: "🐛", title: "Bug fixes & performance boost", desc: "Faster and more stable" },
-  ];
 
   return (
     <div
@@ -85,231 +125,249 @@ export default function UpdatePage() {
 
         <button
           type="button"
+          onClick={handleCheckAgain}
           style={{
             width: "46px",
             height: "46px",
             borderRadius: "50%",
-            border: "1px solid rgba(255,255,255,0.15)",
+            border: "1px solid rgba(139,92,246,0.35)",
             display: "grid",
             placeItems: "center",
-            background: "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
+            background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
             color: "#ffffff",
-            fontSize: "22px",
-            boxShadow: "0 10px 30px rgba(139,92,246,0.25)",
+            fontSize: "20px",
+            boxShadow: "0 10px 30px rgba(139,92,246,0.35)",
             cursor: "pointer",
           }}
         >
-          🔔
+          ↻
         </button>
       </header>
 
-      {/* Status Card */}
-      {updateState === "available" && (
+      {/* Checking State */}
+      {checking && (
         <section
           className="card"
           style={{
-            padding: "32px 24px",
+            padding: "40px 24px",
             textAlign: "center",
-            position: "relative",
-            overflow: "hidden",
-            marginBottom: "20px",
           }}
         >
           <div
             style={{
-              position: "absolute",
-              width: "200px",
-              height: "200px",
-              borderRadius: "50%",
-              background:
-                "radial-gradient(circle, rgba(255,79,154,0.15), transparent 70%)",
-              top: "-80px",
-              left: "-60px",
-            }}
-          />
-
-          <div
-            style={{
-              position: "absolute",
-              width: "200px",
-              height: "200px",
-              borderRadius: "50%",
-              background:
-                "radial-gradient(circle, rgba(139,92,246,0.15), transparent 70%)",
-              bottom: "-100px",
-              right: "-60px",
-            }}
-          />
-
-          <div
-            style={{
-              position: "relative",
-              width: "120px",
-              height: "120px",
-              margin: "0 auto 20px",
-              borderRadius: "40px",
-              display: "grid",
-              placeItems: "center",
-              background: "linear-gradient(135deg, #FF4F9A, #8B5CF6)",
-              color: "#ffffff",
-              fontSize: "64px",
-              boxShadow: "0 18px 45px rgba(255,79,154,0.25)",
+              fontSize: "40px",
+              marginBottom: "16px",
+              animation: "spin 1s linear infinite",
             }}
           >
-            🚀
+            ⏳
           </div>
-
-          <h2 style={{ fontSize: "24px", marginBottom: "12px", position: "relative" }}>
-            New Update Available
+          <h2 style={{ fontSize: "20px", marginBottom: "8px", color: "#fff" }}>
+            Checking for updates...
           </h2>
-
-          <p
-            style={{
-              fontSize: "14px",
-              color: "var(--muted)",
-              marginBottom: "20px",
-              position: "relative",
-            }}
-          >
-            Get the latest features and improvements.
+          <p style={{ fontSize: "13px", color: "var(--muted)" }}>
+            Please wait a moment
           </p>
-
-          <p
-            style={{
-              fontSize: "12px",
-              color: "var(--muted)",
-              position: "relative",
-            }}
-          >
-            Version 1.2.0 • Size: 8.5 MB
-          </p>
+          <style>{`
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
         </section>
       )}
 
-      {/* Downloading State */}
-      {updateState === "downloading" && (
+      {/* Error State */}
+      {!checking && error && (
         <section
           className="card"
           style={{
             padding: "32px 24px",
             textAlign: "center",
-            position: "relative",
-            overflow: "hidden",
-            marginBottom: "20px",
           }}
         >
-          <h2 style={{ fontSize: "24px", marginBottom: "32px" }}>
-            Updating...
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>⚠️</div>
+          <h2 style={{ fontSize: "20px", marginBottom: "10px", color: "#fff" }}>
+            Couldn't check updates
           </h2>
-
-          {/* Progress Circle */}
-          <div
-            style={{
-              position: "relative",
-              width: "140px",
-              height: "140px",
-              margin: "0 auto 32px",
-              display: "grid",
-              placeItems: "center",
-            }}
+          <p style={{ fontSize: "13px", color: "var(--muted)", marginBottom: "20px" }}>
+            {error}
+          </p>
+          <button
+            className="btn btn-primary"
+            onClick={handleCheckAgain}
+            style={{ width: "100%", minHeight: "48px" }}
           >
-            <svg
-              width="140"
-              height="140"
-              style={{
-                transform: "rotate(-90deg)",
-                position: "absolute",
-              }}
-            >
-              <circle
-                cx="70"
-                cy="70"
-                r="65"
-                fill="none"
-                stroke="rgba(139,92,246,0.2)"
-                strokeWidth="3"
-              />
-              <circle
-                cx="70"
-                cy="70"
-                r="65"
-                fill="none"
-                stroke="url(#grad)"
-                strokeWidth="3"
-                strokeDasharray={`${(progress / 100) * 408.407} 408.407`}
-                style={{ transition: "stroke-dasharray 0.3s ease" }}
-              />
-              <defs>
-                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#FF4F9A" />
-                  <stop offset="100%" stopColor="#8B5CF6" />
-                </linearGradient>
-              </defs>
-            </svg>
+            Try Again
+          </button>
+        </section>
+      )}
 
-            <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
-              <p style={{ fontSize: "32px", fontWeight: 700 }}>
-                {progress}%
-              </p>
-              <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "4px" }}>
-                {progress < 50 && "Downloading update"}
-                {progress >= 50 && progress < 100 && "Installing new features"}
-                {progress === 100 && "Optimizing system"}
-              </p>
-            </div>
-          </div>
-
-          {/* Progress Steps */}
-          <div
+      {/* Update Available */}
+      {!checking && !error && hasUpdate && latestUpdate && (
+        <>
+          <section
+            className="card"
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
+              padding: "32px 24px",
+              textAlign: "center",
+              position: "relative",
+              overflow: "hidden",
+              marginBottom: "20px",
             }}
           >
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                fontSize: "14px",
+                position: "absolute",
+                width: "200px",
+                height: "200px",
+                borderRadius: "50%",
+                background:
+                  "radial-gradient(circle, rgba(255,45,149,0.18), transparent 70%)",
+                top: "-80px",
+                left: "-60px",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                width: "200px",
+                height: "200px",
+                borderRadius: "50%",
+                background:
+                  "radial-gradient(circle, rgba(139,92,246,0.18), transparent 70%)",
+                bottom: "-100px",
+                right: "-60px",
+              }}
+            />
+
+            <div
+              style={{
+                position: "relative",
+                width: "120px",
+                height: "120px",
+                margin: "0 auto 20px",
+                borderRadius: "40px",
+                display: "grid",
+                placeItems: "center",
+                background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                color: "#ffffff",
+                fontSize: "56px",
+                boxShadow: "0 18px 45px rgba(255,45,149,0.35)",
               }}
             >
-              <span style={{ color: "var(--success)" }}>✓</span>
-              Downloading update
+              🚀
             </div>
-            {progress >= 50 && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  fontSize: "14px",
-                }}
-              >
-                <span style={{ color: "var(--success)" }}>✓</span>
-                Installing files
+
+            <h2
+              style={{
+                fontSize: "22px",
+                marginBottom: "10px",
+                position: "relative",
+                color: "#fff",
+              }}
+            >
+              New Update Available
+            </h2>
+
+            <p
+              style={{
+                fontSize: "13px",
+                color: "var(--muted)",
+                marginBottom: "20px",
+                position: "relative",
+              }}
+            >
+              A newer version of the app is ready.
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-around",
+                padding: "14px 0",
+                borderTop: "1px solid rgba(139,92,246,0.25)",
+                borderBottom: "1px solid rgba(139,92,246,0.25)",
+                marginBottom: "20px",
+                position: "relative",
+              }}
+            >
+              <div>
+                <p style={{ fontSize: "11px", color: "var(--muted)" }}>
+                  CURRENT
+                </p>
+                <p style={{ fontSize: "14px", fontWeight: 700, color: "#fff" }}>
+                  v{currentVersion}
+                </p>
               </div>
-            )}
-            {progress >= 100 && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  fontSize: "14px",
-                }}
-              >
-                <span style={{ color: "#f59e0b" }}>⚡</span>
-                Optimizing system
+              <div>
+                <p style={{ fontSize: "11px", color: "var(--muted)" }}>
+                  LATEST
+                </p>
+                <p
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    color: "#FF2D95",
+                  }}
+                >
+                  {latestUpdate.version}
+                </p>
               </div>
-            )}
+            </div>
+
+            <button
+              className="btn btn-primary"
+              onClick={handleUpdate}
+              style={{
+                width: "100%",
+                minHeight: "52px",
+                position: "relative",
+                fontSize: "15px",
+                fontWeight: 700,
+              }}
+            >
+              ⚡ Update Now
+            </button>
+          </section>
+
+          {/* Update Details */}
+          <h3
+            style={{
+              fontSize: "18px",
+              marginBottom: "12px",
+              fontWeight: 600,
+              color: "#fff",
+            }}
+          >
+            What's New
+          </h3>
+
+          <div className="card" style={{ padding: "16px", marginBottom: "12px" }}>
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--muted)",
+                marginBottom: "6px",
+              }}
+            >
+              {latestUpdate.date}
+            </p>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#fff",
+                lineHeight: 1.5,
+              }}
+            >
+              {latestUpdate.message}
+            </p>
           </div>
-        </section>
+        </>
       )}
 
-      {/* Complete State */}
-      {updateState === "complete" && (
+      {/* Up to Date */}
+      {!checking && !error && !hasUpdate && latestUpdate && (
         <section
           className="card"
           style={{
@@ -332,7 +390,6 @@ export default function UpdatePage() {
               left: "-60px",
             }}
           />
-
           <div
             style={{
               position: "absolute",
@@ -358,115 +415,77 @@ export default function UpdatePage() {
               background: "linear-gradient(135deg, #22c55e, #16a34a)",
               color: "#ffffff",
               fontSize: "64px",
-              boxShadow: "0 18px 45px rgba(34,197,94,0.25)",
+              boxShadow: "0 18px 45px rgba(34,197,94,0.35)",
             }}
           >
             ✓
           </div>
 
-          <h2 style={{ fontSize: "24px", marginBottom: "12px", position: "relative" }}>
-            Update Successfully!
+          <h2
+            style={{
+              fontSize: "22px",
+              marginBottom: "10px",
+              position: "relative",
+              color: "#fff",
+            }}
+          >
+            You're Up to Date!
           </h2>
 
           <p
             style={{
-              fontSize: "14px",
+              fontSize: "13px",
               color: "var(--muted)",
-              marginBottom: "24px",
+              marginBottom: "20px",
               position: "relative",
             }}
           >
-            Your AI Girls app is now up to date.
+            You have the latest version of the app.
           </p>
 
-          <button
-            className="btn btn-primary"
-            onClick={() => setUpdateState("available")}
+          <div
             style={{
-              width: "100%",
+              display: "flex",
+              justifyContent: "space-around",
+              padding: "14px 0",
+              borderTop: "1px solid rgba(139,92,246,0.25)",
               position: "relative",
             }}
           >
-            Continue
-          </button>
+            <div>
+              <p style={{ fontSize: "11px", color: "var(--muted)" }}>
+                VERSION
+              </p>
+              <p style={{ fontSize: "14px", fontWeight: 700, color: "#fff" }}>
+                {latestUpdate.version}
+              </p>
+            </div>
+            <div>
+              <p style={{ fontSize: "11px", color: "var(--muted)" }}>
+                LAST UPDATE
+              </p>
+              <p style={{ fontSize: "12px", fontWeight: 600, color: "#fff" }}>
+                {latestUpdate.date}
+              </p>
+            </div>
+          </div>
         </section>
       )}
 
-      {/* Update Details */}
-      {updateState === "available" && (
-        <>
-          <h3
-            style={{
-              fontSize: "18px",
-              marginBottom: "12px",
-              fontWeight: 600,
-            }}
-          >
-            Update Details
-          </h3>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {updates.map((update, index) => (
-              <div
-                key={index}
-                className="card"
-                style={{
-                  padding: "16px",
-                  display: "flex",
-                  gap: "12px",
-                }}
-              >
-                <span style={{ fontSize: "24px" }}>{update.icon}</span>
-                <div style={{ textAlign: "left" }}>
-                  <p style={{ fontSize: "14px", fontWeight: 600 }}>
-                    {update.title}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "12px",
-                      color: "var(--muted)",
-                      marginTop: "2px",
-                    }}
-                  >
-                    {update.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Update Button */}
-          <button
-            className="btn btn-primary"
-            onClick={startUpdate}
-            style={{
-              width: "100%",
-              minHeight: "52px",
-              marginTop: "24px",
-              fontSize: "16px",
-              fontWeight: 700,
-            }}
-          >
-            📥 Update Now
-          </button>
-        </>
-      )}
-
-      {updateState === "downloading" && (
-        <button
-          className="btn btn-primary"
-          onClick={completeUpdate}
-          style={{
-            width: "100%",
-            minHeight: "52px",
-            marginTop: "24px",
-            fontSize: "16px",
-            fontWeight: 700,
-          }}
-        >
-          Complete
-        </button>
-      )}
+      {/* Info Card */}
+      <section
+        className="card"
+        style={{
+          padding: "16px",
+          marginTop: "16px",
+        }}
+      >
+        <p style={{ fontSize: "13px", lineHeight: 1.6, color: "var(--muted)" }}>
+          💡 <strong>How it works:</strong> This page checks your GitHub
+          repository for the latest commit. When you tap "Update Now", the app
+          reloads with the newest version. No download needed.
+        </p>
+      </section>
     </div>
   );
 }
