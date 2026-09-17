@@ -50,6 +50,11 @@ export default function Home() {
             borderRadius: "20px",
             width: "calc(100% - 32px)",
             maxWidth: "calc(min(100% - 32px, 1180px))",
+            background: "rgba(20, 12, 40, 0.85)",
+            backdropFilter: "blur(22px)",
+            WebkitBackdropFilter: "blur(22px)",
+            border: "1px solid rgba(139, 92, 246, 0.35)",
+            boxShadow: "0 0 30px rgba(255, 45, 149, 0.25)",
           }}
         >
           {navigationItems.map((item) => {
@@ -64,9 +69,9 @@ export default function Home() {
                   minHeight: "58px",
                   borderRadius: "15px",
                   background: isActive
-                    ? "linear-gradient(135deg, #FF4F9A, #8B5CF6)"
+                    ? "linear-gradient(135deg, #FF2D95, #8B5CF6)"
                     : "transparent",
-                  color: isActive ? "#ffffff" : "var(--muted)",
+                  color: isActive ? "#ffffff" : "#9d94b8",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
@@ -76,13 +81,16 @@ export default function Home() {
                   border: "none",
                   cursor: "pointer",
                   fontSize: "inherit",
+                  boxShadow: isActive
+                    ? "0 0 20px rgba(255, 45, 149, 0.55)"
+                    : "none",
                 }}
               >
                 <span style={{ fontSize: "20px" }}>{item.icon}</span>
                 <span
                   style={{
                     fontSize: "11px",
-                    fontWeight: 600,
+                    fontWeight: 700,
                   }}
                 >
                   {item.label}
@@ -92,7 +100,6 @@ export default function Home() {
           })}
         </nav>
 
-        {/* Safe space for bottom navigation */}
         <div style={{ height: "90px" }} />
       </div>
     </main>
