@@ -663,6 +663,7 @@ export default function VoicePage() {
 
   const char = getCharacter();
   const displayName = getDisplayName();
+  
   return (
     <div
       style={{
