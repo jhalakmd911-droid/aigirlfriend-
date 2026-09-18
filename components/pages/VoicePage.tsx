@@ -1,32 +1,376 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
-type VoiceState = "idle" | "listening" | "speaking";
+type VoiceState = "idle" | "listening" | "thinking" | "speaking";
+
+interface Character {
+  id: string;
+  name: string;
+  icon: string;
+  subtitle: string;
+  voiceLang: string;
+  voicePitch: number;
+  voiceRate: number;
+}
+
+const characters: Character[] = [
+  {
+    id: "jan",
+    name: "Jan",
+    icon: "💫",
+    subtitle: "Girlfriend & Assistant",
+    voiceLang: "bn-BD",
+    voicePitch: 1.2,
+    voiceRate: 1.0,
+  },
+  {
+    id: "lily",
+    name: "Lily",
+    icon: "💼",
+    subtitle: "Business Manager",
+    voiceLang: "bn-BD",
+    voicePitch: 1.1,
+    voiceRate: 1.0,
+  },
+  {
+    id: "emma",
+    name: "Emma",
+    icon: "💕",
+    subtitle: "Romantic Girlfriend",
+    voiceLang: "bn-BD",
+    voicePitch: 1.3,
+    voiceRate: 0.95,
+  },
+  {
+    id: "javed",
+    name: "Javed",
+    icon: "🤖",
+    subtitle: "Personal Assistant",
+    voiceLang: "bn-BD",
+    voicePitch: 0.9,
+    voiceRate: 1.0,
+  },
+  {
+    id: "ayat",
+    name: "Ayat",
+    icon: "✨",
+    subtitle: "Creative & Social",
+    voiceLang: "bn-BD",
+    voicePitch: 1.4,
+    voiceRate: 1.1,
+  },
+];
+
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
+interface SpeechRecognitionInstance extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  onstart: (() => void) | null;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognitionInstance;
+    webkitSpeechRecognition: new () => SpeechRecognitionInstance;
+  }
+}
 
 export default function VoicePage() {
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
-  const [selectedGirl, setSelectedGirl] = useState("lily");
-  const [volume, setVolume] = useState(70);
+  const [selectedCharacter, setSelectedCharacter] = useState("jan");
+  const [customNames, setCustomNames] = useState<Record<string, string>>({});
+  const [transcript, setTranscript] = useState("");
+  const [aiResponse, setAiResponse] = useState("");
+  const [error, setError] = useState("");
+  const [isSupported, setIsSupported] = useState(true);
+  const [showCharacterMenu, setShowCharacterMenu] = useState(false);
 
-  const girls = [
-    { id: "lily", name: "Lily", subtitle: "Sweet & Caring", icon: "🎀" },
-    { id: "emma", name: "Emma", subtitle: "Playful & Fun", icon: "✨" },
-  ];
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const conversationRef = useRef<{ role: string; content: string }[]>([]);
+  const voiceStateRef = useRef<VoiceState>("idle");
 
-  const toggleListening = () => {
-    if (voiceState === "idle") {
+  // voiceState ref sync
+  useEffect(() => {
+    voiceStateRef.current = voiceState;
+  }, [voiceState]);
+
+  // localStorage থেকে Custom Names লোড
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem("customNames");
+    if (saved) {
+      try {
+        setCustomNames(JSON.parse(saved));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const getCharacter = (): Character => {
+    return (
+      characters.find((c) => c.id === selectedCharacter) || characters[0]
+    );
+  };
+
+  const getDisplayName = (): string => {
+    return customNames[selectedCharacter] || getCharacter().name;
+  };
+
+  // ============================================
+  // Speech Recognition Setup
+  // ============================================
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setIsSupported(false);
+      setError("Voice not supported. Please use Chrome browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "bn-BD";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
       setVoiceState("listening");
-      setTimeout(() => {
-        setVoiceState("speaking");
-        setTimeout(() => {
-          setVoiceState("idle");
-        }, 2500);
-      }, 2000);
-    } else {
+      setError("");
+    };
+
+    recognition.onresult = async (event: SpeechRecognitionEvent) => {
+      const text = event.results[0][0].transcript;
+      setTranscript(text);
+      setVoiceState("thinking");
+      await sendToAI(text);
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.error("Speech error:", event.error);
+      if (event.error === "not-allowed") {
+        setError("Microphone permission denied. Please allow mic access.");
+      } else if (event.error === "no-speech") {
+        setError("No speech detected. Please try again.");
+      } else if (event.error === "aborted") {
+        setError("");
+      } else {
+        setError("Voice error: " + event.error);
+      }
+      setVoiceState("idle");
+    };
+
+    recognition.onend = () => {
+      if (
+        voiceStateRef.current !== "thinking" &&
+        voiceStateRef.current !== "speaking"
+      ) {
+        setVoiceState("idle");
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ============================================
+  // AI-তে পাঠানো
+  // ============================================
+  const sendToAI = async (userText: string) => {
+    try {
+      conversationRef.current.push({ role: "user", content: userText });
+
+      // Memory Context
+      let memoryContext = "";
+      if (typeof window !== "undefined") {
+        const mem = localStorage.getItem(`memory_${selectedCharacter}`);
+        if (mem) {
+          try {
+            const memories = JSON.parse(mem);
+            if (Array.isArray(memories) && memories.length > 0) {
+              memoryContext = memories
+                .slice(-20)
+                .map((m: any) => `- ${m.text}`)
+                .join("\n");
+            }
+          } catch (e) {}
+        }
+      }
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: conversationRef.current.slice(-10),
+          character: selectedCharacter,
+          customName: customNames[selectedCharacter] || "",
+          memoryContext,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get response");
+      }
+
+      // Streaming পড়া
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      if (!reader) throw new Error("No stream");
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n").filter((l) => l.trim() !== "");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6);
+            if (data === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(data);
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
+                fullText += delta;
+                setAiResponse(fullText);
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
+      if (!fullText) {
+        fullText = "Sorry, I couldn't respond.";
+        setAiResponse(fullText);
+      }
+
+      conversationRef.current.push({ role: "assistant", content: fullText });
+
+      // AI-র উত্তর পড়ে শোনানো
+      speak(fullText);
+    } catch (err: any) {
+      setError(err.message || "Network error");
       setVoiceState("idle");
     }
   };
+
+  // ============================================
+  // Text-to-Speech
+  // ============================================
+  const speak = (text: string) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      setVoiceState("idle");
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const char = getCharacter();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = char.voiceLang;
+    utterance.pitch = char.voicePitch;
+    utterance.rate = char.voiceRate;
+    utterance.volume = 1;
+
+    utterance.onstart = () => setVoiceState("speaking");
+
+    utterance.onend = () => {
+      setVoiceState("idle");
+    };
+
+    utterance.onerror = () => {
+      setVoiceState("idle");
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // ============================================
+  // Toggle Listening
+  // ============================================
+  const toggleListening = () => {
+    if (voiceState === "speaking") {
+      window.speechSynthesis.cancel();
+      setVoiceState("idle");
+      return;
+    }
+
+    if (voiceState === "listening") {
+      try {
+        recognitionRef.current?.stop();
+      } catch (e) {}
+      setVoiceState("idle");
+      return;
+    }
+
+    if (voiceState === "thinking") {
+      return;
+    }
+
+    setError("");
+    setTranscript("");
+    setAiResponse("");
+
+    try {
+      recognitionRef.current?.start();
+    } catch (err) {
+      setError("Could not start microphone. Try again.");
+    }
+  };
+
+  // ============================================
+  // নতুন ক্যারেক্টারে switch
+  // ============================================
+  const switchCharacter = (id: string) => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    try {
+      recognitionRef.current?.abort();
+    } catch (e) {}
+    conversationRef.current = [];
+    setSelectedCharacter(id);
+    setShowCharacterMenu(false);
+    setVoiceState("idle");
+    setTranscript("");
+    setAiResponse("");
+  };
+
+  const char = getCharacter();
+  const displayName = getDisplayName();
 
   return (
     <div
@@ -45,7 +389,7 @@ export default function VoicePage() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "22px 0 18px",
-          marginBottom: "20px",
+          marginBottom: "16px",
         }}
       >
         <div>
@@ -67,98 +411,116 @@ export default function VoicePage() {
               color: "var(--muted)",
             }}
           >
-            Choose your AI girl and talk
+            Talk with your AI companion
           </p>
         </div>
       </header>
 
-      {/* Girl Selection */}
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
-          gap: "12px",
-          marginBottom: "24px",
-        }}
-      >
-        {girls.map((girl) => (
-          <button
-            key={girl.id}
-            onClick={() => setSelectedGirl(girl.id)}
-            className="card"
-            style={{
-              padding: "20px 16px",
-              textAlign: "center",
-              color: "var(--foreground)",
-              cursor: "pointer",
-              border:
-                selectedGirl === girl.id
-                  ? "2px solid #FF2D95"
-                  : "1px solid var(--border)",
-              position: "relative",
-              boxShadow:
-                selectedGirl === girl.id
-                  ? "0 0 24px rgba(255,45,149,0.45)"
-                  : "none",
-            }}
-          >
-            <div
-              style={{
-                width: "80px",
-                height: "80px",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
-                display: "grid",
-                placeItems: "center",
-                color: "#ffffff",
-                fontSize: "42px",
-                margin: "0 auto 12px",
-                boxShadow: "0 0 22px rgba(255,45,149,0.5)",
-              }}
-            >
-              {girl.icon}
-            </div>
-            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#fff" }}>
-              {girl.name}
-            </h3>
-            <p
-              style={{
-                fontSize: "12px",
-                marginTop: "4px",
-                color: "var(--muted)",
-              }}
-            >
-              {girl.subtitle}
-            </p>
-            {selectedGirl === girl.id && (
+      {/* Character Selector */}
+      <div style={{ position: "relative", marginBottom: "20px" }}>
+        <button
+          onClick={() => setShowCharacterMenu(!showCharacterMenu)}
+          style={{
+            width: "100%",
+            padding: "14px 16px",
+            borderRadius: "14px",
+            background: "rgba(139,92,246,0.15)",
+            border: "1px solid rgba(139,92,246,0.35)",
+            color: "#fff",
+            fontSize: "14px",
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "22px" }}>{char.icon}</span>
+            <div style={{ textAlign: "left" }}>
+              <div>{displayName}</div>
               <div
                 style={{
-                  position: "absolute",
-                  top: "8px",
-                  right: "8px",
-                  width: "24px",
-                  height: "24px",
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
-                  display: "grid",
-                  placeItems: "center",
-                  color: "#ffffff",
-                  fontSize: "13px",
-                  boxShadow: "0 0 12px rgba(255,45,149,0.6)",
+                  fontSize: "11px",
+                  color: "var(--muted)",
+                  fontWeight: 400,
+                  marginTop: "2px",
                 }}
               >
-                ✓
+                {char.subtitle}
               </div>
-            )}
-          </button>
-        ))}
-      </section>
+            </div>
+          </span>
+          <span>{showCharacterMenu ? "▲" : "▼"}</span>
+        </button>
+
+        {showCharacterMenu && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              marginTop: "4px",
+              background: "rgba(20, 12, 40, 0.98)",
+              border: "1px solid rgba(139,92,246,0.4)",
+              borderRadius: "14px",
+              padding: "6px",
+              zIndex: 100,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+              backdropFilter: "blur(20px)",
+            }}
+          >
+            {characters.map((c) => {
+              const isSelected = selectedCharacter === c.id;
+              const cName = customNames[c.id] || c.name;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => switchCharacter(c.id)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    background: isSelected
+                      ? "linear-gradient(135deg, rgba(255,45,149,0.3), rgba(139,92,246,0.3))"
+                      : "transparent",
+                    border: "none",
+                    color: "#fff",
+                    fontSize: "13px",
+                    fontWeight: isSelected ? 700 : 500,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    gap: "10px",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ fontSize: "20px" }}>{c.icon}</span>
+                  <div>
+                    <div>{cName}</div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--muted)",
+                        marginTop: "2px",
+                      }}
+                    >
+                      {c.subtitle}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Voice Interface */}
       <section
         className="card"
         style={{
-          padding: "32px 20px",
+          padding: "28px 18px",
           textAlign: "center",
           position: "relative",
           overflow: "hidden",
@@ -191,23 +553,25 @@ export default function VoicePage() {
 
         <h2
           style={{
-            fontSize: "20px",
-            marginBottom: "24px",
+            fontSize: "18px",
+            marginBottom: "20px",
             position: "relative",
             color: "#fff",
           }}
         >
           {voiceState === "idle" && "Tap to speak"}
           {voiceState === "listening" && "Listening..."}
+          {voiceState === "thinking" && "Thinking..."}
           {voiceState === "speaking" && "Speaking..."}
         </h2>
 
-        <div style={{ position: "relative", marginBottom: "32px" }}>
+        <div style={{ position: "relative", marginBottom: "24px" }}>
           <button
             onClick={toggleListening}
+            disabled={!isSupported || voiceState === "thinking"}
             style={{
-              width: "160px",
-              height: "160px",
+              width: "140px",
+              height: "140px",
               borderRadius: "50%",
               background:
                 voiceState !== "idle"
@@ -220,8 +584,11 @@ export default function VoicePage() {
               display: "grid",
               placeItems: "center",
               margin: "0 auto",
-              cursor: "pointer",
-              fontSize: "64px",
+              cursor:
+                !isSupported || voiceState === "thinking"
+                  ? "not-allowed"
+                  : "pointer",
+              fontSize: "56px",
               transition: "all 0.3s ease",
               boxShadow:
                 voiceState !== "idle"
@@ -230,9 +597,10 @@ export default function VoicePage() {
               position: "relative",
               zIndex: 1,
               color: "#fff",
+              opacity: !isSupported ? 0.5 : 1,
             }}
           >
-            🎤
+            {voiceState === "speaking" ? "🔊" : "🎤"}
           </button>
 
           {voiceState === "listening" && (
@@ -240,8 +608,8 @@ export default function VoicePage() {
               <div
                 style={{
                   position: "absolute",
-                  width: "180px",
-                  height: "180px",
+                  width: "160px",
+                  height: "160px",
                   borderRadius: "50%",
                   border: "2px solid rgba(255,45,149,0.5)",
                   top: "50%",
@@ -253,8 +621,8 @@ export default function VoicePage() {
               <div
                 style={{
                   position: "absolute",
-                  width: "200px",
-                  height: "200px",
+                  width: "180px",
+                  height: "180px",
                   borderRadius: "50%",
                   border: "2px solid rgba(255,45,149,0.25)",
                   top: "50%",
@@ -268,79 +636,119 @@ export default function VoicePage() {
 
           <style>{`
             @keyframes pulse {
-              0% { width: 160px; height: 160px; opacity: 1; }
-              100% { width: 260px; height: 260px; opacity: 0; }
+              0% { width: 140px; height: 140px; opacity: 1; }
+              100% { width: 240px; height: 240px; opacity: 0; }
             }
           `}</style>
         </div>
 
         <p
           style={{
-            fontSize: "14px",
+            fontSize: "13px",
             color: "var(--muted)",
             position: "relative",
+            minHeight: "20px",
           }}
         >
-          {voiceState === "idle" && "Tap the microphone to start speaking"}
+          {voiceState === "idle" && "Tap the microphone and speak"}
           {voiceState === "listening" && "I'm listening to you..."}
-          {voiceState === "speaking" && "I'm responding to you..."}
+          {voiceState === "thinking" && "Let me think..."}
+          {voiceState === "speaking" && "Tap again to stop"}
         </p>
+
+        {error && (
+          <p
+            style={{
+              marginTop: "12px",
+              fontSize: "12px",
+              color: "#ef4444",
+              position: "relative",
+            }}
+          >
+            ⚠️ {error}
+          </p>
+        )}
       </section>
 
-      {/* Music Controls */}
-      <section className="card" style={{ padding: "20px", marginTop: "16px" }}>
-        <h3 style={{ fontSize: "16px", marginBottom: "16px", color: "#fff" }}>
-          🎵 Background Music
-        </h3>
+      {/* Conversation Display */}
+      {(transcript || aiResponse) && (
+        <section
+          className="card"
+          style={{
+            padding: "16px",
+            marginTop: "16px",
+          }}
+        >
+          <h3
+            style={{
+              fontSize: "14px",
+              marginBottom: "12px",
+              color: "#fff",
+              fontWeight: 600,
+            }}
+          >
+            Conversation
+          </h3>
 
-        <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-          {["Calm", "Lofi", "Ambient", "Jazz"].map((genre) => (
-            <button
-              key={genre}
+          {transcript && (
+            <div
               style={{
-                flex: 1,
-                padding: "8px",
-                borderRadius: "8px",
-                border: "1px solid rgba(139,92,246,0.3)",
-                background: "rgba(139,92,246,0.12)",
-                fontSize: "12px",
-                cursor: "pointer",
-                color: "#fff",
-                transition: "all 0.2s ease",
+                padding: "10px 14px",
+                borderRadius: "12px",
+                background:
+                  "linear-gradient(135deg, rgba(255,45,149,0.25), rgba(139,92,246,0.25))",
+                marginBottom: "10px",
+                border: "1px solid rgba(255,45,149,0.4)",
               }}
             >
-              {genre}
-            </button>
-          ))}
-        </div>
+              <p
+                style={{
+                  fontSize: "11px",
+                  color: "rgba(255,255,255,0.7)",
+                  marginBottom: "4px",
+                }}
+              >
+                You said:
+              </p>
+              <p style={{ fontSize: "14px", color: "#fff" }}>{transcript}</p>
+            </div>
+          )}
 
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <span style={{ fontSize: "14px" }}>🔊</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            style={{ flex: 1, cursor: "pointer" }}
-          />
-          <span style={{ fontSize: "12px", color: "var(--muted)" }}>
-            {volume}%
-          </span>
-        </div>
-      </section>
+          {aiResponse && (
+            <div
+              style={{
+                padding: "10px 14px",
+                borderRadius: "12px",
+                background: "rgba(139,92,246,0.18)",
+                border: "1px solid rgba(139,92,246,0.35)",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "11px",
+                  color: "rgba(255,255,255,0.7)",
+                  marginBottom: "4px",
+                }}
+              >
+                {displayName} said:
+              </p>
+              <p style={{ fontSize: "14px", color: "#fff" }}>{aiResponse}</p>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Tips */}
       <section className="card" style={{ padding: "16px", marginTop: "16px" }}>
         <p
           style={{
-            fontSize: "13px",
+            fontSize: "12px",
             lineHeight: 1.6,
             color: "var(--muted)",
           }}
         >
-          💡 <strong>Tip:</strong> Speak clearly for better recognition. You can
-          also choose background music to make the conversation more relaxing.
+          💡 <strong>Tip:</strong> Works with or without headphones. Speak
+          clearly. Use Chrome for best results. Allow microphone when prompted.
         </p>
       </section>
     </div>
