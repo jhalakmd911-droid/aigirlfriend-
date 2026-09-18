@@ -1160,4 +1160,55 @@ export default function ChatPage() {
                         borderRadius: "6px",
                         background: "rgba(239,68,68,0.2)",
                         border: "1px solid rgba(239,68,68,0.4)",
-                        color: "#ef
+                        color: "#ef4444",
+              }}
+            >
+              🗑️
+            </button>
+          </div>
+        ))}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={() => setShowMemory(false)}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+              {memories.length > 0 && (
+                <button
+                  onClick={clearAllMemory}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    borderRadius: "12px",
+                    background: "rgba(239,68,68,0.2)",
+                    border: "1px solid rgba(239,68,68,0.4)",
+                    color: "#ef4444",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  🗑️ Clear All
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
