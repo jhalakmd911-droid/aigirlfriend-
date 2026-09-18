@@ -36,7 +36,20 @@ const characters: Character[] = [
   { id: "ayat", name: "Ayat", icon: "✨", subtitle: "Creative & Social" },
 ];
 
-const emojiOptions = ["💫", "💼", "💕", "🤖", "✨", "🌸", "🌙", "🎀", "🦋", "⭐", "🌟", "💐"];
+const emojiOptions = [
+  "💫",
+  "💼",
+  "💕",
+  "🤖",
+  "✨",
+  "🌸",
+  "🌙",
+  "🎀",
+  "🦋",
+  "⭐",
+  "🌟",
+  "💐",
+];
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
@@ -440,7 +453,13 @@ export default function ChatPage() {
             <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#fff" }}>
               {displayName}
             </h2>
-            <p style={{ fontSize: "12px", color: "#22c55e", marginTop: "2px" }}>
+            <p
+              style={{
+                fontSize: "12px",
+                color: "#22c55e",
+                marginTop: "2px",
+              }}
+            >
               ● Online
             </p>
           </div>
@@ -500,7 +519,9 @@ export default function ChatPage() {
             alignItems: "center",
           }}
         >
-          <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span
+            style={{ display: "flex", alignItems: "center", gap: "10px" }}
+          >
             <span
               style={{
                 width: "32px",
@@ -580,7 +601,8 @@ export default function ChatPage() {
                       overflow: "hidden",
                       display: "grid",
                       placeItems: "center",
-                      background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                      background:
+                        "linear-gradient(135deg, #FF2D95, #8B5CF6)",
                     }}
                   >
                     {renderPhoto(c.id, 32)}
@@ -804,7 +826,13 @@ export default function ChatPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "16px" }}>
+            <h3
+              style={{
+                color: "#fff",
+                fontSize: "18px",
+                marginBottom: "16px",
+              }}
+            >
               Change Name
             </h3>
             <p
@@ -814,7 +842,8 @@ export default function ChatPage() {
                 marginBottom: "16px",
               }}
             >
-              Current: <strong style={{ color: "#fff" }}>{displayName}</strong>
+              Current:{" "}
+              <strong style={{ color: "#fff" }}>{displayName}</strong>
             </p>
             <input
               type="text"
@@ -899,7 +928,13 @@ export default function ChatPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "16px" }}>
+            <h3
+              style={{
+                color: "#fff",
+                fontSize: "18px",
+                marginBottom: "16px",
+              }}
+            >
               📷 {displayName}-র ছবি
             </h3>
 
@@ -1049,7 +1084,13 @@ export default function ChatPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "8px" }}>
+            <h3
+              style={{
+                color: "#fff",
+                fontSize: "18px",
+                marginBottom: "8px",
+              }}
+            >
               🧠 {displayName}-র Memory
             </h3>
             <p
@@ -1119,20 +1160,4 @@ export default function ChatPage() {
                         borderRadius: "6px",
                         background: "rgba(239,68,68,0.2)",
                         border: "1px solid rgba(239,68,68,0.4)",
-                        color: "#ef4444",
-                        fontSize: "11px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button
-                onClick={() => setShowMemory(false)}
-                style={{
-                  flex
+                        color: "#ef
