@@ -10,6 +10,7 @@ import {
 
 interface HomePageProps {
   onNavigate: (tab: string) => void;
+  onOpenProfile: (characterId: string) => void;
 }
 
 interface Character {
@@ -29,12 +30,17 @@ const characters: Character[] = [
 
 const emojiOptions = ["💫", "💼", "💕", "🤖", "✨", "🌸", "🌙", "🎀", "🦋", "⭐", "🌟", "💐"];
 
-export default function HomePage({ onNavigate }: HomePageProps) {
+export default function HomePage({
+  onNavigate,
+  onOpenProfile,
+}: HomePageProps) {
   const [customNames, setCustomNames] = useState<Record<string, string>>({});
   const [charPhotos, setCharPhotos] = useState<Record<string, string>>({});
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
   const [showNameMenu, setShowNameMenu] = useState(false);
-  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(
+    null
+  );
   const [nameInputValue, setNameInputValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,8 +95,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   };
 
   const handleCharacterClick = (id: string) => {
-    setSelectedCharacter(id);
-    onNavigate("chat");
+    onOpenProfile(id);
   };
 
   const handlePhotoOpen = (id: string) => {
@@ -141,19 +146,14 @@ export default function HomePage({ onNavigate }: HomePageProps) {
 
   const saveCustomName = () => {
     if (!selectedCharacter) return;
+    const updated = { ...customNames };
     if (nameInputValue.trim()) {
-      const updated = {
-        ...customNames,
-        [selectedCharacter]: nameInputValue.trim(),
-      };
-      setCustomNames(updated);
-      localStorage.setItem("customNames", JSON.stringify(updated));
+      updated[selectedCharacter] = nameInputValue.trim();
     } else {
-      const copy = { ...customNames };
-      delete copy[selectedCharacter];
-      setCustomNames(copy);
-      localStorage.setItem("customNames", JSON.stringify(copy));
+      delete updated[selectedCharacter];
     }
+    setCustomNames(updated);
+    localStorage.setItem("customNames", JSON.stringify(updated));
     setShowNameMenu(false);
   };
 
@@ -379,7 +379,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                   📷
                 </button>
 
-                {/* Name Edit Button */}
+                {/* Name Button */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -474,8 +474,8 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             color: "var(--muted)",
           }}
         >
-          Tap a character to start chatting or talking. Long press photo to
-          change it. Your data stays on your phone.
+          Tap a character to open their profile. Change photos and names using
+          the buttons on each card.
         </p>
       </section>
 
@@ -620,17 +620,6 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 </button>
               ))}
             </div>
-
-            <p
-              style={{
-                fontSize: "11px",
-                color: "var(--muted)",
-                textAlign: "center",
-                lineHeight: 1.5,
-              }}
-            >
-              💡 ছবির সাইজ ১ MB এর কম। GIF/WebP সাপোর্ট করে।
-            </p>
           </div>
         </div>
       )}
@@ -722,7 +711,16 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               <button
                 onClick={() => {
                   setNameInputValue("");
-                  saveCustomName();
+                  if (selectedCharacter) {
+                    const updated = { ...customNames };
+                    delete updated[selectedCharacter];
+                    setCustomNames(updated);
+                    localStorage.setItem(
+                      "customNames",
+                      JSON.stringify(updated)
+                    );
+                  }
+                  setShowNameMenu(false);
                 }}
                 style={{
                   flex: 1,
