@@ -663,7 +663,6 @@ export default function VoicePage() {
 
   const char = getCharacter();
   const displayName = getDisplayName();
-
   return (
     <div
       style={{
@@ -1114,7 +1113,6 @@ export default function VoicePage() {
         </p>
       </section>
 
-      {/* Photo Modal */}
       {showPhotoMenu && (
         <div
           style={{
@@ -1160,4 +1158,109 @@ export default function VoicePage() {
                 height: "120px",
                 borderRadius: "50%",
                 margin: "0 auto 20px",
-                overflow:
+                overflow: "hidden",
+                background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                display: "grid",
+                placeItems: "center",
+                border: "3px solid rgba(255,255,255,0.2)",
+                boxShadow: "0 0 30px rgba(255,45,149,0.5)",
+              }}
+            >
+              {renderPhoto(selectedCharacter, 120)}
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "10px",
+                marginBottom: "16px",
+              }}
+            >
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  padding: "14px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                📁 Upload
+              </button>
+              <button
+                onClick={handleResetPhoto}
+                style={{
+                  padding: "14px",
+                  borderRadius: "12px",
+                  background: "rgba(139,92,246,0.2)",
+                  border: "1px solid rgba(139,92,246,0.4)",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                🔄 Reset
+              </button>
+            </div>
+
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--muted)",
+                marginBottom: "12px",
+                textAlign: "center",
+              }}
+            >
+              অথবা Emoji বেছে নিন
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "8px",
+                justifyContent: "center",
+                marginBottom: "16px",
+              }}
+            >
+              {emojiOptions.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleEmojiSelect(emoji)}
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "50%",
+                    background: "rgba(139,92,246,0.15)",
+                    border: "1px solid rgba(139,92,246,0.35)",
+                    fontSize: "22px",
+                    cursor: "pointer",
+                  }}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+            <p
+              style={{
+                fontSize: "11px",
+                color: "var(--muted)",
+                textAlign: "center",
+                lineHeight: 1.5,
+              }}
+            >
+              💡 ছবির সাইজ ১ MB এর কম। GIF/WebP সাপোর্ট করে।
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
