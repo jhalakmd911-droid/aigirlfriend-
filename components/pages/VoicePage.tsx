@@ -27,8 +27,8 @@ const characters: Character[] = [
     icon: "💫",
     subtitle: "Girlfriend & Assistant",
     voiceLang: "bn-BD",
-    voicePitch: 1.2,
-    voiceRate: 1.0,
+    voicePitch: 1.35,
+    voiceRate: 0.92,
   },
   {
     id: "lily",
@@ -36,7 +36,7 @@ const characters: Character[] = [
     icon: "💼",
     subtitle: "Business Manager",
     voiceLang: "bn-BD",
-    voicePitch: 1.1,
+    voicePitch: 1.15,
     voiceRate: 1.0,
   },
   {
@@ -45,8 +45,8 @@ const characters: Character[] = [
     icon: "💕",
     subtitle: "Romantic Girlfriend",
     voiceLang: "bn-BD",
-    voicePitch: 1.3,
-    voiceRate: 0.95,
+    voicePitch: 1.45,
+    voiceRate: 0.88,
   },
   {
     id: "javed",
@@ -54,7 +54,7 @@ const characters: Character[] = [
     icon: "🤖",
     subtitle: "Personal Assistant",
     voiceLang: "bn-BD",
-    voicePitch: 0.9,
+    voicePitch: 0.85,
     voiceRate: 1.0,
   },
   {
@@ -63,8 +63,8 @@ const characters: Character[] = [
     icon: "✨",
     subtitle: "Creative & Social",
     voiceLang: "bn-BD",
-    voicePitch: 1.4,
-    voiceRate: 1.1,
+    voicePitch: 1.55,
+    voiceRate: 1.05,
   },
 ];
 
@@ -99,6 +99,95 @@ declare global {
   }
 }
 
+// ============================================
+// Voice Selection Helper (Bangla First)
+// ============================================
+const getBestVoice = (charId: string): SpeechSynthesisVoice | null => {
+  if (typeof window === "undefined" || !window.speechSynthesis) return null;
+
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length === 0) return null;
+
+  // Priority 1: Bangla Female Voice (সবচেয়ে আগে)
+  if (charId !== "javed") {
+    const banglaFemale = voices.find(
+      (v) =>
+        v.lang.toLowerCase().includes("bn") &&
+        (v.name.toLowerCase().includes("female") ||
+          v.name.toLowerCase().includes("heera") ||
+          v.name.toLowerCase().includes("swara") ||
+          v.name.toLowerCase().includes("bangla") ||
+          v.name.toLowerCase().includes("bengali"))
+    );
+    if (banglaFemale) return banglaFemale;
+  }
+
+  // Priority 2: যেকোনো Bangla Voice
+  const banglaVoice = voices.find((v) =>
+    v.lang.toLowerCase().includes("bn")
+  );
+  if (banglaVoice) return banglaVoice;
+
+  // Priority 3: Bangla Locale (bn-IN, bn-BD)
+  const banglaLocale = voices.find(
+    (v) =>
+      v.lang.toLowerCase().startsWith("bn") ||
+      v.lang.toLowerCase().includes("bengali")
+  );
+  if (banglaLocale) return banglaLocale;
+
+  // Priority 4: Hindi Female (বাংলার কাছাকাছি)
+  if (charId !== "javed") {
+    const hindiFemale = voices.find(
+      (v) =>
+        v.lang.toLowerCase().includes("hi") &&
+        (v.name.toLowerCase().includes("female") ||
+          v.name.toLowerCase().includes("swara") ||
+          v.name.toLowerCase().includes("heera"))
+    );
+    if (hindiFemale) return hindiFemale;
+  }
+
+  // Priority 5: English Female (Fallback)
+  if (charId !== "javed") {
+    const englishFemaleNames = [
+      "Google UK English Female",
+      "Google US English",
+      "Samantha",
+      "Victoria",
+      "Karen",
+      "Moira",
+      "Tessa",
+    ];
+    for (const name of englishFemaleNames) {
+      const found = voices.find((v) =>
+        v.name.toLowerCase().includes(name.toLowerCase())
+      );
+      if (found) return found;
+    }
+  }
+
+  // Priority 6: Male Voice (শুধু Javed)
+  if (charId === "javed") {
+    const maleNames = [
+      "Google UK English Male",
+      "Microsoft David",
+      "Daniel",
+      "Alex",
+      "Rishi",
+    ];
+    for (const name of maleNames) {
+      const found = voices.find((v) =>
+        v.name.toLowerCase().includes(name.toLowerCase())
+      );
+      if (found) return found;
+    }
+  }
+
+  // Fallback: প্রথম available voice
+  return voices[0];
+};
+
 export default function VoicePage() {
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
   const [selectedCharacter, setSelectedCharacter] = useState("jan");
@@ -120,6 +209,29 @@ export default function VoicePage() {
   useEffect(() => {
     voiceStateRef.current = voiceState;
   }, [voiceState]);
+
+  // ============================================
+  // Voices Load Listener (Chrome Fix)
+  // ============================================
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    const loadVoices = () => {
+      window.speechSynthesis.getVoices();
+    };
+
+    loadVoices();
+
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    return () => {
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
 
   // Custom Names লোড
   useEffect(() => {
@@ -365,6 +477,9 @@ export default function VoicePage() {
     }
   };
 
+  // ============================================
+  // Professional Speak Function
+  // ============================================
   const speak = (text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) {
       setVoiceState("idle");
@@ -375,16 +490,73 @@ export default function VoicePage() {
 
     const char = getCharacter();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = char.voiceLang;
-    utterance.pitch = char.voicePitch;
-    utterance.rate = char.voiceRate;
-    utterance.volume = 1;
 
-    utterance.onstart = () => setVoiceState("speaking");
-    utterance.onend = () => setVoiceState("idle");
-    utterance.onerror = () => setVoiceState("idle");
+    // Voice Selection
+    const selectedVoice = getBestVoice(char.id);
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice.lang;
+    } else {
+      utterance.lang = char.voiceLang || "bn-BD";
+    }
 
-    window.speechSynthesis.speak(utterance);
+    // ক্যারেক্টার-wise Pitch/Rate
+    switch (char.id) {
+      case "jan":
+        utterance.pitch = 1.35;
+        utterance.rate = 0.92;
+        utterance.volume = 1.0;
+        break;
+
+      case "lily":
+        utterance.pitch = 1.15;
+        utterance.rate = 1.0;
+        utterance.volume = 1.0;
+        break;
+
+      case "emma":
+        utterance.pitch = 1.45;
+        utterance.rate = 0.88;
+        utterance.volume = 1.0;
+        break;
+
+      case "javed":
+        utterance.pitch = 0.85;
+        utterance.rate = 1.0;
+        utterance.volume = 1.0;
+        break;
+
+      case "ayat":
+        utterance.pitch = 1.55;
+        utterance.rate = 1.05;
+        utterance.volume = 1.0;
+        break;
+
+      default:
+        utterance.pitch = 1.2;
+        utterance.rate = 1.0;
+        utterance.volume = 1.0;
+    }
+
+    utterance.onstart = () => {
+      setVoiceState("speaking");
+    };
+
+    utterance.onend = () => {
+      setVoiceState("idle");
+    };
+
+    utterance.onerror = (event) => {
+      console.error("TTS Error:", event);
+      setVoiceState("idle");
+    };
+
+    try {
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.error("Speak failed:", err);
+      setVoiceState("idle");
+    }
   };
 
   const toggleListening = () => {
@@ -988,109 +1160,4 @@ export default function VoicePage() {
                 height: "120px",
                 borderRadius: "50%",
                 margin: "0 auto 20px",
-                overflow: "hidden",
-                background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
-                display: "grid",
-                placeItems: "center",
-                border: "3px solid rgba(255,255,255,0.2)",
-                boxShadow: "0 0 30px rgba(255,45,149,0.5)",
-              }}
-            >
-              {renderPhoto(selectedCharacter, 120)}
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "10px",
-                marginBottom: "16px",
-              }}
-            >
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  padding: "14px",
-                  borderRadius: "12px",
-                  background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
-                  color: "#fff",
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                📁 Upload
-              </button>
-              <button
-                onClick={handleResetPhoto}
-                style={{
-                  padding: "14px",
-                  borderRadius: "12px",
-                  background: "rgba(139,92,246,0.2)",
-                  border: "1px solid rgba(139,92,246,0.4)",
-                  color: "#fff",
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                🔄 Reset
-              </button>
-            </div>
-
-            <p
-              style={{
-                fontSize: "12px",
-                color: "var(--muted)",
-                marginBottom: "12px",
-                textAlign: "center",
-              }}
-            >
-              অথবা Emoji বেছে নিন
-            </p>
-
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "8px",
-                justifyContent: "center",
-                marginBottom: "16px",
-              }}
-            >
-              {emojiOptions.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => handleEmojiSelect(emoji)}
-                  style={{
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "50%",
-                    background: "rgba(139,92,246,0.15)",
-                    border: "1px solid rgba(139,92,246,0.35)",
-                    fontSize: "22px",
-                    cursor: "pointer",
-                  }}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-
-            <p
-              style={{
-                fontSize: "11px",
-                color: "var(--muted)",
-                textAlign: "center",
-                lineHeight: 1.5,
-              }}
-            >
-              💡 ছবির সাইজ ১ MB এর কম। GIF/WebP সাপোর্ট করে।
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                overflow:
