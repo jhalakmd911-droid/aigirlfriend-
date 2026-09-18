@@ -5,29 +5,26 @@ import HomePage from "@/components/pages/HomePage";
 import ChatPage from "@/components/pages/ChatPage";
 import VoicePage from "@/components/pages/VoicePage";
 import UpdatePage from "@/components/pages/UpdatePage";
+import SecurityPage from "@/components/pages/SecurityPage";
 import ProfilePage from "@/components/pages/ProfilePage";
 
 const navigationItems = [
   { id: "home", label: "Home", icon: "⌂" },
   { id: "chat", label: "Chat", icon: "♡" },
   { id: "voice", label: "Voice", icon: "◉" },
+  { id: "security", label: "Security", icon: "🛡️" },
   { id: "update", label: "Update", icon: "✦" },
 ];
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("home");
   const [profileChar, setProfileChar] = useState<string | null>(null);
-  const [activeCharacter, setActiveCharacter] = useState<string | null>(null);
 
   const handleNavigate = (tab: string, characterId?: string) => {
-    if (characterId) {
-      setActiveCharacter(characterId);
-    }
     setActiveTab(tab);
   };
 
   const renderPage = () => {
-    // Profile view — সবার উপরে
     if (profileChar) {
       return (
         <ProfilePage
@@ -46,6 +43,8 @@ export default function Home() {
         return <ChatPage />;
       case "voice":
         return <VoicePage />;
+      case "security":
+        return <SecurityPage />;
       case "update":
         return <UpdatePage />;
       default:
@@ -73,8 +72,8 @@ export default function Home() {
             transform: "translateX(-50%)",
             zIndex: 20,
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "4px",
+            gridTemplateColumns: "repeat(5, 1fr)",
+            gap: "3px",
             padding: "7px",
             borderRadius: "20px",
             width: "calc(100% - 32px)",
@@ -116,13 +115,15 @@ export default function Home() {
                   boxShadow: isActive
                     ? "0 0 20px rgba(255, 45, 149, 0.55)"
                     : "none",
+                  padding: "4px 2px",
                 }}
               >
-                <span style={{ fontSize: "20px" }}>{item.icon}</span>
+                <span style={{ fontSize: "18px" }}>{item.icon}</span>
                 <span
                   style={{
-                    fontSize: "11px",
+                    fontSize: "9px",
                     fontWeight: 700,
+                    letterSpacing: "-0.2px",
                   }}
                 >
                   {item.label}
