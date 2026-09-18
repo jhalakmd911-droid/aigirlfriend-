@@ -1,6 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import {
+  getPhoto,
+  savePhoto,
+  resetPhoto,
+  fileToBase64,
+} from "@/lib/characterPhotos";
 
 type VoiceState = "idle" | "listening" | "thinking" | "speaking";
 
@@ -62,6 +68,8 @@ const characters: Character[] = [
   },
 ];
 
+const emojiOptions = ["💫", "💼", "💕", "🤖", "✨", "🌸", "🌙", "🎀", "🦋", "⭐", "🌟", "💐"];
+
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
   resultIndex: number;
@@ -95,16 +103,19 @@ export default function VoicePage() {
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
   const [selectedCharacter, setSelectedCharacter] = useState("jan");
   const [customNames, setCustomNames] = useState<Record<string, string>>({});
+  const [charPhotos, setCharPhotos] = useState<Record<string, string>>({});
   const [transcript, setTranscript] = useState("");
   const [aiResponse, setAiResponse] = useState("");
   const [error, setError] = useState("");
   const [isSupported, setIsSupported] = useState(true);
   const [showCharacterMenu, setShowCharacterMenu] = useState(false);
   const [memoryCount, setMemoryCount] = useState(0);
+  const [showPhotoMenu, setShowPhotoMenu] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationRef = useRef<{ role: string; content: string }[]>([]);
   const voiceStateRef = useRef<VoiceState>("idle");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     voiceStateRef.current = voiceState;
@@ -119,6 +130,16 @@ export default function VoicePage() {
         setCustomNames(JSON.parse(saved));
       } catch (e) {}
     }
+  }, []);
+
+  // Photos লোড
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const photos: Record<string, string> = {};
+    characters.forEach((c) => {
+      photos[c.id] = getPhoto(c.id);
+    });
+    setCharPhotos(photos);
   }, []);
 
   // Memory Count লোড
@@ -145,7 +166,6 @@ export default function VoicePage() {
     return customNames[selectedCharacter] || getCharacter().name;
   };
 
-  // "সেভ করো" কমান্ড
   const isSaveCommand = (text: string): boolean => {
     const lower = text.toLowerCase();
     const triggers = [
@@ -162,7 +182,6 @@ export default function VoicePage() {
     return triggers.some((t) => lower.includes(t));
   };
 
-  // Memory Save
   const saveMemory = (text: string) => {
     if (typeof window === "undefined") return;
     const memKey = `memory_${selectedCharacter}`;
@@ -184,7 +203,6 @@ export default function VoicePage() {
     setMemoryCount(memories.length);
   };
 
-  // Memory Context
   const buildMemoryContext = (): string => {
     if (typeof window === "undefined") return "";
     const mem = localStorage.getItem(`memory_${selectedCharacter}`);
@@ -327,7 +345,6 @@ export default function VoicePage() {
 
       conversationRef.current.push({ role: "assistant", content: fullText });
 
-      // "সেভ করো" কমান্ড চেক
       if (isSaveCommand(userText)) {
         const saveText = userText
           .replace(
@@ -348,7 +365,6 @@ export default function VoicePage() {
     }
   };
 
-  // Text-to-Speech
   const speak = (text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) {
       setVoiceState("idle");
@@ -371,7 +387,6 @@ export default function VoicePage() {
     window.speechSynthesis.speak(utterance);
   };
 
-  // Toggle Listening
   const toggleListening = () => {
     if (voiceState === "speaking") {
       window.speechSynthesis.cancel();
@@ -400,7 +415,6 @@ export default function VoicePage() {
     }
   };
 
-  // ক্যারেক্টার Switch
   const switchCharacter = (id: string) => {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -414,6 +428,65 @@ export default function VoicePage() {
     setVoiceState("idle");
     setTranscript("");
     setAiResponse("");
+  };
+
+  // Photo Handlers
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert("ছবির সাইজ ১ MB এর কম হতে হবে");
+      return;
+    }
+    try {
+      const base64 = await fileToBase64(file);
+      savePhoto(selectedCharacter, base64);
+      setCharPhotos((prev) => ({ ...prev, [selectedCharacter]: base64 }));
+      setShowPhotoMenu(false);
+    } catch (err) {
+      alert("ছবি লোড করা যায়নি");
+    }
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    savePhoto(selectedCharacter, emoji);
+    setCharPhotos((prev) => ({ ...prev, [selectedCharacter]: emoji }));
+    setShowPhotoMenu(false);
+  };
+
+  const handleResetPhoto = () => {
+    resetPhoto(selectedCharacter);
+    setCharPhotos((prev) => {
+      const copy = { ...prev };
+      delete copy[selectedCharacter];
+      return copy;
+    });
+    setShowPhotoMenu(false);
+  };
+
+  const renderPhoto = (charId: string, size: number) => {
+    const photo = charPhotos[charId];
+    const fallback = characters.find((c) => c.id === charId)?.icon || "💫";
+
+    if (photo && photo.startsWith("data:")) {
+      return (
+        <img
+          src={photo}
+          alt={charId}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            borderRadius: "50%",
+          }}
+        />
+      );
+    }
+    return (
+      <span style={{ fontSize: size * 0.55, lineHeight: 1 }}>
+        {photo || fallback}
+      </span>
+    );
   };
 
   const char = getCharacter();
@@ -478,7 +551,6 @@ export default function VoicePage() {
         </button>
       </header>
 
-      {/* Character Selector */}
       <div style={{ position: "relative", marginBottom: "20px" }}>
         <button
           onClick={() => setShowCharacterMenu(!showCharacterMenu)}
@@ -498,7 +570,19 @@ export default function VoicePage() {
           }}
         >
           <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "22px" }}>{char.icon}</span>
+            <span
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "50%",
+                overflow: "hidden",
+                display: "grid",
+                placeItems: "center",
+                background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+              }}
+            >
+              {renderPhoto(selectedCharacter, 36)}
+            </span>
             <div style={{ textAlign: "left" }}>
               <div>{displayName}</div>
               <div
@@ -558,7 +642,19 @@ export default function VoicePage() {
                     alignItems: "center",
                   }}
                 >
-                  <span style={{ fontSize: "20px" }}>{c.icon}</span>
+                  <span
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      overflow: "hidden",
+                      display: "grid",
+                      placeItems: "center",
+                      background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                    }}
+                  >
+                    {renderPhoto(c.id, 32)}
+                  </span>
                   <div>
                     <div>{cName}</div>
                     <div
@@ -578,7 +674,6 @@ export default function VoicePage() {
         )}
       </div>
 
-      {/* Voice Interface */}
       <section
         className="card"
         style={{
@@ -629,6 +724,26 @@ export default function VoicePage() {
 
         <div style={{ position: "relative", marginBottom: "24px" }}>
           <button
+            onClick={() => setShowPhotoMenu(true)}
+            style={{
+              position: "absolute",
+              top: "0",
+              right: "0",
+              width: "36px",
+              height: "36px",
+              borderRadius: "50%",
+              background: "rgba(139,92,246,0.25)",
+              border: "1px solid rgba(139,92,246,0.5)",
+              color: "#fff",
+              fontSize: "16px",
+              cursor: "pointer",
+              zIndex: 2,
+            }}
+          >
+            📷
+          </button>
+
+          <button
             onClick={toggleListening}
             disabled={!isSupported || voiceState === "thinking"}
             style={{
@@ -660,9 +775,21 @@ export default function VoicePage() {
               zIndex: 1,
               color: "#fff",
               opacity: !isSupported ? 0.5 : 1,
+              overflow: "hidden",
             }}
           >
-            {voiceState === "speaking" ? "🔊" : "🎤"}
+            {charPhotos[selectedCharacter] &&
+            charPhotos[selectedCharacter].startsWith("data:") ? (
+              <img
+                src={charPhotos[selectedCharacter]}
+                alt={char.name}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            ) : voiceState === "speaking" ? (
+              "🔊"
+            ) : (
+              "🎤"
+            )}
           </button>
 
           {voiceState === "listening" && (
@@ -678,6 +805,7 @@ export default function VoicePage() {
                   left: "50%",
                   transform: "translate(-50%, -50%)",
                   animation: "pulse 1.5s ease-out infinite",
+                  pointerEvents: "none",
                 }}
               />
               <div
@@ -691,6 +819,7 @@ export default function VoicePage() {
                   left: "50%",
                   transform: "translate(-50%, -50%)",
                   animation: "pulse 1.5s ease-out 0.5s infinite",
+                  pointerEvents: "none",
                 }}
               />
             </>
@@ -732,7 +861,6 @@ export default function VoicePage() {
         )}
       </section>
 
-      {/* Conversation Display */}
       {(transcript || aiResponse) && (
         <section
           className="card"
@@ -800,7 +928,6 @@ export default function VoicePage() {
         </section>
       )}
 
-      {/* Tips */}
       <section className="card" style={{ padding: "16px", marginTop: "16px" }}>
         <p
           style={{
@@ -814,6 +941,156 @@ export default function VoicePage() {
           information to memory.
         </p>
       </section>
+
+      {/* Photo Modal */}
+      {showPhotoMenu && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            backdropFilter: "blur(8px)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 100,
+            padding: "20px",
+          }}
+          onClick={() => setShowPhotoMenu(false)}
+        >
+          <div
+            style={{
+              background: "rgba(20, 12, 40, 0.98)",
+              border: "1px solid rgba(139,92,246,0.4)",
+              borderRadius: "20px",
+              padding: "24px",
+              maxWidth: "400px",
+              width: "100%",
+              maxHeight: "80vh",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "16px" }}>
+              📷 {displayName}-র ছবি
+            </h3>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handlePhotoUpload}
+            />
+
+            <div
+              style={{
+                width: "120px",
+                height: "120px",
+                borderRadius: "50%",
+                margin: "0 auto 20px",
+                overflow: "hidden",
+                background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                display: "grid",
+                placeItems: "center",
+                border: "3px solid rgba(255,255,255,0.2)",
+                boxShadow: "0 0 30px rgba(255,45,149,0.5)",
+              }}
+            >
+              {renderPhoto(selectedCharacter, 120)}
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "10px",
+                marginBottom: "16px",
+              }}
+            >
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  padding: "14px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                📁 Upload
+              </button>
+              <button
+                onClick={handleResetPhoto}
+                style={{
+                  padding: "14px",
+                  borderRadius: "12px",
+                  background: "rgba(139,92,246,0.2)",
+                  border: "1px solid rgba(139,92,246,0.4)",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                🔄 Reset
+              </button>
+            </div>
+
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--muted)",
+                marginBottom: "12px",
+                textAlign: "center",
+              }}
+            >
+              অথবা Emoji বেছে নিন
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "8px",
+                justifyContent: "center",
+                marginBottom: "16px",
+              }}
+            >
+              {emojiOptions.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleEmojiSelect(emoji)}
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "50%",
+                    background: "rgba(139,92,246,0.15)",
+                    border: "1px solid rgba(139,92,246,0.35)",
+                    fontSize: "22px",
+                    cursor: "pointer",
+                  }}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+            <p
+              style={{
+                fontSize: "11px",
+                color: "var(--muted)",
+                textAlign: "center",
+                lineHeight: 1.5,
+              }}
+            >
+              💡 ছবির সাইজ ১ MB এর কম। GIF/WebP সাপোর্ট করে।
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
