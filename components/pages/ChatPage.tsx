@@ -9,6 +9,12 @@ interface Message {
   timestamp: Date;
 }
 
+interface MemoryItem {
+  id: string;
+  text: string;
+  date: string;
+}
+
 interface Character {
   id: string;
   name: string;
@@ -40,18 +46,18 @@ export default function ChatPage() {
   const [nameInputValue, setNameInputValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [showCharacterMenu, setShowCharacterMenu] = useState(false);
+  const [showMemory, setShowMemory] = useState(false);
+  const [memories, setMemories] = useState<MemoryItem[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // localStorage থেকে Custom Names লোড
+  // Custom Names লোড
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem("customNames");
     if (saved) {
       try {
         setCustomNames(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) {}
     }
   }, []);
 
@@ -60,6 +66,21 @@ export default function ChatPage() {
     if (typeof window === "undefined") return;
     localStorage.setItem("customNames", JSON.stringify(customNames));
   }, [customNames]);
+
+  // Memory লোড
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mem = localStorage.getItem(`memory_${selectedCharacter}`);
+    if (mem) {
+      try {
+        setMemories(JSON.parse(mem));
+      } catch (e) {
+        setMemories([]);
+      }
+    } else {
+      setMemories([]);
+    }
+  }, [selectedCharacter]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -77,9 +98,50 @@ export default function ChatPage() {
     return customNames[selectedCharacter] || getCharacter().name;
   };
 
-  // ============================================
-  // চ্যাট মেসেজ পাঠানো (Streaming)
-  // ============================================
+  const saveMemory = (text: string) => {
+    const newItem: MemoryItem = {
+      id: Date.now().toString(),
+      text,
+      date: new Date().toLocaleString("bn-BD", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+    const updated = [...memories, newItem];
+    setMemories(updated);
+    localStorage.setItem(
+      `memory_${selectedCharacter}`,
+      JSON.stringify(updated)
+    );
+  };
+
+  const isSaveCommand = (text: string): boolean => {
+    const lower = text.toLowerCase();
+    const triggers = [
+      "সেভ করো",
+      "মনে রাখো",
+      "রাখো",
+      "লিখে রাখো",
+      "save this",
+      "remember this",
+      "keep this",
+      "note this",
+      "don't forget",
+    ];
+    return triggers.some((t) => lower.includes(t));
+  };
+
+  const buildMemoryContext = (): string => {
+    if (memories.length === 0) return "";
+    return memories
+      .slice(-20)
+      .map((m) => `- ${m.text}`)
+      .join("\n");
+  };
+
   const handleSendMessage = async () => {
     const text = inputValue.trim();
     if (!text || loading) return;
@@ -91,32 +153,13 @@ export default function ChatPage() {
       timestamp: new Date(),
     };
 
-    // API-র জন্য history তৈরি
     const historyForApi = [...messages, userMsg].map((m) => ({
       role: m.sender === "user" ? "user" : "assistant",
       content: m.text,
     }));
 
-    // Memory Context তৈরি (localStorage থেকে)
-    let memoryContext = "";
-    if (typeof window !== "undefined") {
-      const mem = localStorage.getItem(`memory_${selectedCharacter}`);
-      if (mem) {
-        try {
-          const memories = JSON.parse(mem);
-          if (Array.isArray(memories) && memories.length > 0) {
-            memoryContext = memories
-              .slice(-20)
-              .map((m: any) => `- ${m.text}`)
-              .join("\n");
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
+    const memoryContext = buildMemoryContext();
 
-    // AI-র মেসেজ প্লেসহোল্ডার
     const aiMsgId = (Date.now() + 1).toString();
     const aiMsg: Message = {
       id: aiMsgId,
@@ -143,10 +186,9 @@ export default function ChatPage() {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || "Failed to fetch");
+        throw new Error(errData.error || "Failed");
       }
 
-      // Streaming পড়া
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
@@ -175,9 +217,7 @@ export default function ChatPage() {
                   )
                 );
               }
-            } catch (e) {
-              // ignore
-            }
+            } catch (e) {}
           }
         }
       }
@@ -191,8 +231,20 @@ export default function ChatPage() {
           )
         );
       }
+
+      if (isSaveCommand(text)) {
+        const saveText = text
+          .replace(
+            /সেভ করো|মনে রাখো|রাখো|লিখে রাখো|save this|remember this|keep this|note this|don't forget/gi,
+            ""
+          )
+          .replace(/^[,:\-\s]+/, "")
+          .trim();
+        if (saveText) {
+          saveMemory(saveText);
+        }
+      }
     } catch (err: any) {
-      console.error(err);
       setMessages((prev) =>
         prev.map((m) =>
           m.id === aiMsgId
@@ -205,21 +257,16 @@ export default function ChatPage() {
     }
   };
 
-  // ============================================
-  // Direct Read (TTS - যা-ই হোক পড়বে)
-  // ============================================
   const directRead = (text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) {
-      alert("TTS not supported in this browser");
+      alert("TTS not supported");
       return;
     }
     window.speechSynthesis.cancel();
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "bn-BD";
     utterance.rate = 1;
     utterance.pitch = 1.2;
-    utterance.volume = 1;
     window.speechSynthesis.speak(utterance);
   };
 
@@ -229,9 +276,6 @@ export default function ChatPage() {
     }
   };
 
-  // ============================================
-  // Custom Name সেভ
-  // ============================================
   const saveCustomName = () => {
     if (nameInputValue.trim()) {
       setCustomNames((prev) => ({
@@ -252,6 +296,21 @@ export default function ChatPage() {
     setShowNameInput(false);
   };
 
+  const deleteMemory = (id: string) => {
+    const updated = memories.filter((m) => m.id !== id);
+    setMemories(updated);
+    localStorage.setItem(
+      `memory_${selectedCharacter}`,
+      JSON.stringify(updated)
+    );
+  };
+
+  const clearAllMemory = () => {
+    if (!confirm("সব মেমোরি মুছে ফেলবেন?")) return;
+    setMemories([]);
+    localStorage.removeItem(`memory_${selectedCharacter}`);
+  };
+
   const char = getCharacter();
   const displayName = getDisplayName();
 
@@ -265,7 +324,6 @@ export default function ChatPage() {
         paddingBottom: "110px",
       }}
     >
-      {/* Header */}
       <header
         style={{
           display: "flex",
@@ -302,25 +360,42 @@ export default function ChatPage() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowNameInput(true)}
-          style={{
-            padding: "6px 12px",
-            borderRadius: "10px",
-            background: "rgba(139,92,246,0.15)",
-            border: "1px solid rgba(139,92,246,0.35)",
-            color: "#fff",
-            fontSize: "12px",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          ✏️ Name
-        </button>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <button
+            type="button"
+            onClick={() => setShowMemory(true)}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "10px",
+              background: "rgba(255,45,149,0.15)",
+              border: "1px solid rgba(255,45,149,0.35)",
+              color: "#FF2D95",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            🧠 {memories.length}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowNameInput(true)}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "10px",
+              background: "rgba(139,92,246,0.15)",
+              border: "1px solid rgba(139,92,246,0.35)",
+              color: "#fff",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            ✏️
+          </button>
+        </div>
       </header>
 
-      {/* Character Selector Dropdown */}
       <div style={{ position: "relative", marginBottom: "12px" }}>
         <button
           onClick={() => setShowCharacterMenu(!showCharacterMenu)}
@@ -357,7 +432,7 @@ export default function ChatPage() {
               border: "1px solid rgba(139,92,246,0.4)",
               borderRadius: "14px",
               padding: "6px",
-              zIndex: 10,
+              zIndex: 100,
               boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
               backdropFilter: "blur(20px)",
             }}
@@ -418,7 +493,6 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Messages */}
       <div
         style={{
           flex: 1,
@@ -468,7 +542,6 @@ export default function ChatPage() {
               {m.text || (loading ? "● ● ●" : "")}
             </div>
 
-            {/* AI Message: Direct Read বাটন */}
             {m.sender === "ai" && m.text && !loading && (
               <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
                 <button
@@ -509,7 +582,6 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <div
         style={{
           position: "fixed",
@@ -529,7 +601,6 @@ export default function ChatPage() {
           type="button"
           onClick={() => directRead(inputValue)}
           disabled={!inputValue.trim()}
-          title="Read the text aloud"
           style={{
             width: "40px",
             height: "40px",
@@ -543,9 +614,6 @@ export default function ChatPage() {
             display: "grid",
             placeItems: "center",
             cursor: inputValue.trim() ? "pointer" : "not-allowed",
-            boxShadow: inputValue.trim()
-              ? "0 0 15px rgba(255,45,149,0.5)"
-              : "none",
           }}
         >
           🔊
@@ -599,7 +667,6 @@ export default function ChatPage() {
         </button>
       </div>
 
-      {/* Custom Name Modal */}
       {showNameInput && (
         <div
           style={{
@@ -625,16 +692,9 @@ export default function ChatPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3
-              style={{
-                color: "#fff",
-                fontSize: "18px",
-                marginBottom: "16px",
-              }}
-            >
+            <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "16px" }}>
               Change Name
             </h3>
-
             <p
               style={{
                 color: "var(--muted)",
@@ -644,7 +704,6 @@ export default function ChatPage() {
             >
               Current: <strong style={{ color: "#fff" }}>{displayName}</strong>
             </p>
-
             <input
               type="text"
               value={nameInputValue}
@@ -662,7 +721,6 @@ export default function ChatPage() {
                 marginBottom: "16px",
               }}
             />
-
             <div style={{ display: "flex", gap: "10px" }}>
               <button
                 onClick={saveCustomName}
@@ -697,23 +755,155 @@ export default function ChatPage() {
                 🔄 Reset
               </button>
             </div>
+          </div>
+        </div>
+      )}
 
-            <button
-              onClick={() => setShowNameInput(false)}
+      {showMemory && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            backdropFilter: "blur(8px)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 100,
+            padding: "20px",
+          }}
+          onClick={() => setShowMemory(false)}
+        >
+          <div
+            style={{
+              background: "rgba(20, 12, 40, 0.98)",
+              border: "1px solid rgba(139,92,246,0.4)",
+              borderRadius: "20px",
+              padding: "24px",
+              maxWidth: "500px",
+              width: "100%",
+              maxHeight: "80vh",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "8px" }}>
+              🧠 {displayName}-র Memory
+            </h3>
+            <p
               style={{
-                width: "100%",
-                marginTop: "10px",
-                padding: "10px",
-                borderRadius: "12px",
-                background: "transparent",
-                border: "1px solid rgba(139,92,246,0.3)",
                 color: "var(--muted)",
-                fontSize: "13px",
-                cursor: "pointer",
+                fontSize: "12px",
+                marginBottom: "16px",
               }}
             >
-              Cancel
-            </button>
+              Total: {memories.length} items
+            </p>
+
+            {memories.length === 0 ? (
+              <p
+                style={{
+                  color: "var(--muted)",
+                  fontSize: "13px",
+                  textAlign: "center",
+                  padding: "20px",
+                }}
+              >
+                কোনো মেমোরি নেই।
+                <br />
+                "সেভ করো" বলে কিছু লিখুন।
+              </p>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  marginBottom: "16px",
+                }}
+              >
+                {memories.map((m) => (
+                  <div
+                    key={m.id}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: "10px",
+                      background: "rgba(139,92,246,0.15)",
+                      border: "1px solid rgba(139,92,246,0.3)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <p style={{ color: "#fff", fontSize: "13px" }}>
+                        {m.text}
+                      </p>
+                      <p
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: "10px",
+                          marginTop: "4px",
+                        }}
+                      >
+                        {m.date}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => deleteMemory(m.id)}
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        background: "rgba(239,68,68,0.2)",
+                        border: "1px solid rgba(239,68,68,0.4)",
+                        color: "#ef4444",
+                        fontSize: "11px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={() => setShowMemory(false)}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+              {memories.length > 0 && (
+                <button
+                  onClick={clearAllMemory}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    borderRadius: "12px",
+                    background: "rgba(239,68,68,0.2)",
+                    border: "1px solid rgba(239,68,68,0.4)",
+                    color: "#ef4444",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  🗑️ Clear All
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
