@@ -1,6 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import {
+  getPhoto,
+  savePhoto,
+  resetPhoto,
+  fileToBase64,
+} from "@/lib/characterPhotos";
 
 interface Message {
   id: string;
@@ -30,6 +36,8 @@ const characters: Character[] = [
   { id: "ayat", name: "Ayat", icon: "✨", subtitle: "Creative & Social" },
 ];
 
+const emojiOptions = ["💫", "💼", "💕", "🤖", "✨", "🌸", "🌙", "🎀", "🦋", "⭐", "🌟", "💐"];
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -42,13 +50,16 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState("");
   const [selectedCharacter, setSelectedCharacter] = useState("jan");
   const [customNames, setCustomNames] = useState<Record<string, string>>({});
+  const [charPhotos, setCharPhotos] = useState<Record<string, string>>({});
   const [showNameInput, setShowNameInput] = useState(false);
+  const [showPhotoMenu, setShowPhotoMenu] = useState(false);
   const [nameInputValue, setNameInputValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [showCharacterMenu, setShowCharacterMenu] = useState(false);
   const [showMemory, setShowMemory] = useState(false);
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Custom Names লোড
   useEffect(() => {
@@ -66,6 +77,16 @@ export default function ChatPage() {
     if (typeof window === "undefined") return;
     localStorage.setItem("customNames", JSON.stringify(customNames));
   }, [customNames]);
+
+  // Photos লোড
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const photos: Record<string, string> = {};
+    characters.forEach((c) => {
+      photos[c.id] = getPhoto(c.id);
+    });
+    setCharPhotos(photos);
+  }, []);
 
   // Memory লোড
   useEffect(() => {
@@ -296,6 +317,41 @@ export default function ChatPage() {
     setShowNameInput(false);
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+      alert("ছবির সাইজ ১ MB এর কম হতে হবে");
+      return;
+    }
+
+    try {
+      const base64 = await fileToBase64(file);
+      savePhoto(selectedCharacter, base64);
+      setCharPhotos((prev) => ({ ...prev, [selectedCharacter]: base64 }));
+      setShowPhotoMenu(false);
+    } catch (err) {
+      alert("ছবি লোড করা যায়নি");
+    }
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    savePhoto(selectedCharacter, emoji);
+    setCharPhotos((prev) => ({ ...prev, [selectedCharacter]: emoji }));
+    setShowPhotoMenu(false);
+  };
+
+  const handleResetPhoto = () => {
+    resetPhoto(selectedCharacter);
+    setCharPhotos((prev) => {
+      const copy = { ...prev };
+      delete copy[selectedCharacter];
+      return copy;
+    });
+    setShowPhotoMenu(false);
+  };
+
   const deleteMemory = (id: string) => {
     const updated = memories.filter((m) => m.id !== id);
     setMemories(updated);
@@ -309,6 +365,31 @@ export default function ChatPage() {
     if (!confirm("সব মেমোরি মুছে ফেলবেন?")) return;
     setMemories([]);
     localStorage.removeItem(`memory_${selectedCharacter}`);
+  };
+
+  const renderPhoto = (charId: string, size: number) => {
+    const photo = charPhotos[charId];
+    const fallback = characters.find((c) => c.id === charId)?.icon || "💫";
+
+    if (photo && photo.startsWith("data:")) {
+      return (
+        <img
+          src={photo}
+          alt={charId}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            borderRadius: "50%",
+          }}
+        />
+      );
+    }
+    return (
+      <span style={{ fontSize: size * 0.55, lineHeight: 1 }}>
+        {photo || fallback}
+      </span>
+    );
   };
 
   const char = getCharacter();
@@ -335,7 +416,8 @@ export default function ChatPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div
+          <button
+            onClick={() => setShowPhotoMenu(true)}
             style={{
               width: "48px",
               height: "48px",
@@ -346,10 +428,14 @@ export default function ChatPage() {
               color: "#fff",
               fontSize: "22px",
               boxShadow: "0 0 22px rgba(255,45,149,0.55)",
+              cursor: "pointer",
+              overflow: "hidden",
+              border: "2px solid rgba(255,255,255,0.2)",
+              padding: 0,
             }}
           >
-            {char.icon}
-          </div>
+            {renderPhoto(selectedCharacter, 48)}
+          </button>
           <div>
             <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#fff" }}>
               {displayName}
@@ -414,8 +500,21 @@ export default function ChatPage() {
             alignItems: "center",
           }}
         >
-          <span>
-            {char.icon} {displayName}
+          <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                overflow: "hidden",
+                display: "grid",
+                placeItems: "center",
+                background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+              }}
+            >
+              {renderPhoto(selectedCharacter, 32)}
+            </span>
+            {displayName}
           </span>
           <span>{showCharacterMenu ? "▲" : "▼"}</span>
         </button>
@@ -473,7 +572,19 @@ export default function ChatPage() {
                     alignItems: "center",
                   }}
                 >
-                  <span style={{ fontSize: "20px" }}>{c.icon}</span>
+                  <span
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      overflow: "hidden",
+                      display: "grid",
+                      placeItems: "center",
+                      background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                    }}
+                  >
+                    {renderPhoto(c.id, 32)}
+                  </span>
                   <div>
                     <div>{cName}</div>
                     <div
@@ -667,6 +778,7 @@ export default function ChatPage() {
         </button>
       </div>
 
+      {/* Custom Name Modal */}
       {showNameInput && (
         <div
           style={{
@@ -759,6 +871,157 @@ export default function ChatPage() {
         </div>
       )}
 
+      {/* Photo Modal */}
+      {showPhotoMenu && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            backdropFilter: "blur(8px)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 100,
+            padding: "20px",
+          }}
+          onClick={() => setShowPhotoMenu(false)}
+        >
+          <div
+            style={{
+              background: "rgba(20, 12, 40, 0.98)",
+              border: "1px solid rgba(139,92,246,0.4)",
+              borderRadius: "20px",
+              padding: "24px",
+              maxWidth: "400px",
+              width: "100%",
+              maxHeight: "80vh",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "16px" }}>
+              📷 {displayName}-র ছবি
+            </h3>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handlePhotoUpload}
+            />
+
+            <div
+              style={{
+                width: "120px",
+                height: "120px",
+                borderRadius: "50%",
+                margin: "0 auto 20px",
+                overflow: "hidden",
+                background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                display: "grid",
+                placeItems: "center",
+                border: "3px solid rgba(255,255,255,0.2)",
+                boxShadow: "0 0 30px rgba(255,45,149,0.5)",
+              }}
+            >
+              {renderPhoto(selectedCharacter, 120)}
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "10px",
+                marginBottom: "16px",
+              }}
+            >
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  padding: "14px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                📁 Upload
+              </button>
+              <button
+                onClick={handleResetPhoto}
+                style={{
+                  padding: "14px",
+                  borderRadius: "12px",
+                  background: "rgba(139,92,246,0.2)",
+                  border: "1px solid rgba(139,92,246,0.4)",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                🔄 Reset
+              </button>
+            </div>
+
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--muted)",
+                marginBottom: "12px",
+                textAlign: "center",
+              }}
+            >
+              অথবা Emoji বেছে নিন
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "8px",
+                justifyContent: "center",
+                marginBottom: "16px",
+              }}
+            >
+              {emojiOptions.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleEmojiSelect(emoji)}
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "50%",
+                    background: "rgba(139,92,246,0.15)",
+                    border: "1px solid rgba(139,92,246,0.35)",
+                    fontSize: "22px",
+                    cursor: "pointer",
+                  }}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+            <p
+              style={{
+                fontSize: "11px",
+                color: "var(--muted)",
+                textAlign: "center",
+                lineHeight: 1.5,
+              }}
+            >
+              💡 ছবির সাইজ ১ MB এর কম। GIF/WebP সাপোর্ট করে।
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Memory Modal */}
       {showMemory && (
         <div
           style={{
@@ -872,41 +1135,4 @@ export default function ChatPage() {
               <button
                 onClick={() => setShowMemory(false)}
                 style={{
-                  flex: 1,
-                  padding: "12px",
-                  borderRadius: "12px",
-                  background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
-                  color: "#fff",
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                Close
-              </button>
-              {memories.length > 0 && (
-                <button
-                  onClick={clearAllMemory}
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    borderRadius: "12px",
-                    background: "rgba(239,68,68,0.2)",
-                    border: "1px solid rgba(239,68,68,0.4)",
-                    color: "#ef4444",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  🗑️ Clear All
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                  flex
