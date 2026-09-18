@@ -100,42 +100,108 @@ export default function VoicePage() {
   const [error, setError] = useState("");
   const [isSupported, setIsSupported] = useState(true);
   const [showCharacterMenu, setShowCharacterMenu] = useState(false);
+  const [memoryCount, setMemoryCount] = useState(0);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationRef = useRef<{ role: string; content: string }[]>([]);
   const voiceStateRef = useRef<VoiceState>("idle");
 
-  // voiceState ref sync
   useEffect(() => {
     voiceStateRef.current = voiceState;
   }, [voiceState]);
 
-  // localStorage থেকে Custom Names লোড
+  // Custom Names লোড
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem("customNames");
     if (saved) {
       try {
         setCustomNames(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) {}
     }
   }, []);
 
+  // Memory Count লোড
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mem = localStorage.getItem(`memory_${selectedCharacter}`);
+    if (mem) {
+      try {
+        const arr = JSON.parse(mem);
+        setMemoryCount(Array.isArray(arr) ? arr.length : 0);
+      } catch (e) {
+        setMemoryCount(0);
+      }
+    } else {
+      setMemoryCount(0);
+    }
+  }, [selectedCharacter]);
+
   const getCharacter = (): Character => {
-    return (
-      characters.find((c) => c.id === selectedCharacter) || characters[0]
-    );
+    return characters.find((c) => c.id === selectedCharacter) || characters[0];
   };
 
   const getDisplayName = (): string => {
     return customNames[selectedCharacter] || getCharacter().name;
   };
 
-  // ============================================
+  // "সেভ করো" কমান্ড
+  const isSaveCommand = (text: string): boolean => {
+    const lower = text.toLowerCase();
+    const triggers = [
+      "সেভ করো",
+      "মনে রাখো",
+      "রাখো",
+      "লিখে রাখো",
+      "save this",
+      "remember this",
+      "keep this",
+      "note this",
+      "don't forget",
+    ];
+    return triggers.some((t) => lower.includes(t));
+  };
+
+  // Memory Save
+  const saveMemory = (text: string) => {
+    if (typeof window === "undefined") return;
+    const memKey = `memory_${selectedCharacter}`;
+    const existing = localStorage.getItem(memKey);
+    let memories: any[] = [];
+    if (existing) {
+      try {
+        memories = JSON.parse(existing);
+      } catch (e) {
+        memories = [];
+      }
+    }
+    memories.push({
+      id: Date.now().toString(),
+      text,
+      date: new Date().toLocaleString("bn-BD"),
+    });
+    localStorage.setItem(memKey, JSON.stringify(memories));
+    setMemoryCount(memories.length);
+  };
+
+  // Memory Context
+  const buildMemoryContext = (): string => {
+    if (typeof window === "undefined") return "";
+    const mem = localStorage.getItem(`memory_${selectedCharacter}`);
+    if (!mem) return "";
+    try {
+      const memories = JSON.parse(mem);
+      if (Array.isArray(memories) && memories.length > 0) {
+        return memories
+          .slice(-20)
+          .map((m: any) => `- ${m.text}`)
+          .join("\n");
+      }
+    } catch (e) {}
+    return "";
+  };
+
   // Speech Recognition Setup
-  // ============================================
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -203,29 +269,12 @@ export default function VoicePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ============================================
   // AI-তে পাঠানো
-  // ============================================
   const sendToAI = async (userText: string) => {
     try {
       conversationRef.current.push({ role: "user", content: userText });
 
-      // Memory Context
-      let memoryContext = "";
-      if (typeof window !== "undefined") {
-        const mem = localStorage.getItem(`memory_${selectedCharacter}`);
-        if (mem) {
-          try {
-            const memories = JSON.parse(mem);
-            if (Array.isArray(memories) && memories.length > 0) {
-              memoryContext = memories
-                .slice(-20)
-                .map((m: any) => `- ${m.text}`)
-                .join("\n");
-            }
-          } catch (e) {}
-        }
-      }
+      const memoryContext = buildMemoryContext();
 
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -242,7 +291,6 @@ export default function VoicePage() {
         throw new Error("Failed to get response");
       }
 
-      // Streaming পড়া
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
@@ -279,7 +327,20 @@ export default function VoicePage() {
 
       conversationRef.current.push({ role: "assistant", content: fullText });
 
-      // AI-র উত্তর পড়ে শোনানো
+      // "সেভ করো" কমান্ড চেক
+      if (isSaveCommand(userText)) {
+        const saveText = userText
+          .replace(
+            /সেভ করো|মনে রাখো|রাখো|লিখে রাখো|save this|remember this|keep this|note this|don't forget/gi,
+            ""
+          )
+          .replace(/^[,:\-\s]+/, "")
+          .trim();
+        if (saveText) {
+          saveMemory(saveText);
+        }
+      }
+
       speak(fullText);
     } catch (err: any) {
       setError(err.message || "Network error");
@@ -287,9 +348,7 @@ export default function VoicePage() {
     }
   };
 
-  // ============================================
   // Text-to-Speech
-  // ============================================
   const speak = (text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) {
       setVoiceState("idle");
@@ -306,21 +365,13 @@ export default function VoicePage() {
     utterance.volume = 1;
 
     utterance.onstart = () => setVoiceState("speaking");
-
-    utterance.onend = () => {
-      setVoiceState("idle");
-    };
-
-    utterance.onerror = () => {
-      setVoiceState("idle");
-    };
+    utterance.onend = () => setVoiceState("idle");
+    utterance.onerror = () => setVoiceState("idle");
 
     window.speechSynthesis.speak(utterance);
   };
 
-  // ============================================
   // Toggle Listening
-  // ============================================
   const toggleListening = () => {
     if (voiceState === "speaking") {
       window.speechSynthesis.cancel();
@@ -336,9 +387,7 @@ export default function VoicePage() {
       return;
     }
 
-    if (voiceState === "thinking") {
-      return;
-    }
+    if (voiceState === "thinking") return;
 
     setError("");
     setTranscript("");
@@ -351,9 +400,7 @@ export default function VoicePage() {
     }
   };
 
-  // ============================================
-  // নতুন ক্যারেক্টারে switch
-  // ============================================
+  // ক্যারেক্টার Switch
   const switchCharacter = (id: string) => {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -382,7 +429,6 @@ export default function VoicePage() {
         paddingBottom: "110px",
       }}
     >
-      {/* Header */}
       <header
         style={{
           display: "flex",
@@ -414,6 +460,22 @@ export default function VoicePage() {
             Talk with your AI companion
           </p>
         </div>
+
+        <button
+          type="button"
+          style={{
+            padding: "8px 14px",
+            borderRadius: "12px",
+            background: "rgba(255,45,149,0.15)",
+            border: "1px solid rgba(255,45,149,0.35)",
+            color: "#FF2D95",
+            fontSize: "12px",
+            fontWeight: 700,
+            cursor: "default",
+          }}
+        >
+          🧠 {memoryCount}
+        </button>
       </header>
 
       {/* Character Selector */}
@@ -748,7 +810,8 @@ export default function VoicePage() {
           }}
         >
           💡 <strong>Tip:</strong> Works with or without headphones. Speak
-          clearly. Use Chrome for best results. Allow microphone when prompted.
+          clearly. Use Chrome for best results. Say "সেভ করো" to save any
+          information to memory.
         </p>
       </section>
     </div>
