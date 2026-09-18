@@ -1,26 +1,24 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <style>
-    @media (prefers-color-scheme: light) {
-      .background { fill: black; }
-      .foreground { fill: white; }
-    }
-    @media (prefers-color-scheme: dark) {
-      .background { fill: white; }
-      .foreground { fill: black; }
-    }
-  </style>
-  <g clip-path="url(#clip0_7960_43945)">
-    <rect class="background" width="180" height="180" rx="37" />
-    <g style="transform: scale(95%); transform-origin: center">
-      <path class="foreground"
-        d="M101.141 53H136.632C151.023 53 162.689 64.6662 162.689 79.0573V112.904H148.112V79.0573C148.112 78.7105 148.098 78.3662 148.072 78.0251L112.581 112.898C112.701 112.902 112.821 112.904 112.941 112.904H148.112V126.672H112.941C98.5504 126.672 86.5638 114.891 86.5638 100.5V66.7434H101.141V100.5C101.141 101.15 101.191 101.792 101.289 102.422L137.56 66.7816C137.255 66.7563 136.945 66.7434 136.632 66.7434H101.141V53Z" />
-      <path class="foreground"
-        d="M65.2926 124.136L14 66.7372H34.6355L64.7495 100.436V66.7372H80.1365V118.47C80.1365 126.278 70.4953 129.958 65.2926 124.136Z" />
-    </g>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <clipPath id="clip0_7960_43945">
-      <rect width="180" height="180" fill="white" />
-    </clipPath>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF2D95"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
   </defs>
+  
+  <rect width="512" height="512" rx="100" fill="#05010f"/>
+  
+  <rect x="96" y="96" width="320" height="320" rx="80" fill="url(#bgGrad)"/>
+  
+  <path d="M 256 384 C 216 348, 160 296, 160 244 C 160 210, 186 186, 216 186 C 236 186, 250 198, 256 210 C 262 198, 276 186, 296 186 C 326 186, 352 210, 352 244 C 352 296, 296 348, 256 384 Z" fill="#ffffff"/>
+  
+  <circle cx="220" cy="238" r="12" fill="#8B5CF6"/>
+  <circle cx="292" cy="238" r="12" fill="#8B5CF6"/>
+  
+  <path d="M 218 274 Q 256 302 294 274" stroke="#8B5CF6" stroke-width="10" fill="none" stroke-linecap="round"/>
+  
+  <circle cx="110" cy="110" r="8" fill="#FF2D95"/>
+  <circle cx="402" cy="120" r="6" fill="#8B5CF6"/>
+  <circle cx="120" cy="402" r="7" fill="#8B5CF6"/>
+  <circle cx="400" cy="392" r="9" fill="#FF2D95"/>
 </svg>
