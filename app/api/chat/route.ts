@@ -171,14 +171,16 @@ If the user says anything like:
 Then you must:
 1. Acknowledge warmly: "✅ সেভ করে রাখলাম" or "✅ Saved"
 2. Confirm what you saved in one short sentence
-3. Do NOT refuse — just save it
-
-Example:
-User: "সেভ করো, আমার প্রিয় রং নীল"
-You: "✅ সেভ করে রাখলাম: আপনার প্রিয় রং নীল"`;
+3. Do NOT refuse — just save it`;
 
     const systemPrompt =
       basePrompt + nameInstruction + memoryInstruction + saveInstruction;
+
+    // ============================================
+    // Model Selection — Vercel Environment থেকে
+    // ============================================
+    const model =
+      process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-exp:free";
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -191,7 +193,7 @@ You: "✅ সেভ করে রাখলাম: আপনার প্রি�
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-flash-1.5-8b",
+          model: model,
           messages: [
             { role: "system", content: systemPrompt },
             ...messages,
