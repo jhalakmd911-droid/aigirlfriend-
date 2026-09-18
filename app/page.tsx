@@ -5,6 +5,7 @@ import HomePage from "@/components/pages/HomePage";
 import ChatPage from "@/components/pages/ChatPage";
 import VoicePage from "@/components/pages/VoicePage";
 import UpdatePage from "@/components/pages/UpdatePage";
+import ProfilePage from "@/components/pages/ProfilePage";
 
 const navigationItems = [
   { id: "home", label: "Home", icon: "⌂" },
@@ -15,8 +16,31 @@ const navigationItems = [
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("home");
+  const [profileChar, setProfileChar] = useState<string | null>(null);
+  const [activeCharacter, setActiveCharacter] = useState<string | null>(null);
+
+  const handleNavigate = (tab: string, characterId?: string) => {
+    if (characterId) {
+      setActiveCharacter(characterId);
+    }
+    setActiveTab(tab);
+  };
 
   const renderPage = () => {
+    // Profile view — সবার উপরে
+    if (profileChar) {
+      return (
+        <ProfilePage
+          characterId={profileChar}
+          onNavigate={(tab, charId) => {
+            setProfileChar(null);
+            handleNavigate(tab, charId);
+          }}
+          onBack={() => setProfileChar(null)}
+        />
+      );
+    }
+
     switch (activeTab) {
       case "chat":
         return <ChatPage />;
@@ -25,7 +49,12 @@ export default function Home() {
       case "update":
         return <UpdatePage />;
       default:
-        return <HomePage onNavigate={setActiveTab} />;
+        return (
+          <HomePage
+            onNavigate={handleNavigate}
+            onOpenProfile={setProfileChar}
+          />
+        );
     }
   };
 
@@ -58,13 +87,16 @@ export default function Home() {
           }}
         >
           {navigationItems.map((item) => {
-            const isActive = activeTab === item.id;
+            const isActive = activeTab === item.id && !profileChar;
 
             return (
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setProfileChar(null);
+                  setActiveTab(item.id);
+                }}
                 style={{
                   minHeight: "58px",
                   borderRadius: "15px",
