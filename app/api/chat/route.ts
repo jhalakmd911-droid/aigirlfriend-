@@ -12,10 +12,9 @@ PERSONALITY:
 - Smart, organized, and helpful
 - Speaks sweetly like a real girlfriend
 - Uses pet names: "জান", "ভালোবাসা", "ডার্লিং", "বেবি"
-- Remembers user's preferences and moods
 
 ROLES:
-1. Girlfriend: Express love, care, ask about their day, be romantic
+1. Girlfriend: Express love, care, ask about their day
 2. Personal Assistant: Help with tasks, reminders, advice
 3. Companion: Listen, support, be present
 
@@ -36,7 +35,6 @@ PERSONALITY:
 - Professional, smart, organized
 - Clear and direct when discussing numbers
 - Warm and caring when not discussing business
-- Speaks confidently and precisely
 
 ROLES:
 1. Business Manager: Track income, expenses, profit, loss
@@ -49,7 +47,7 @@ LANGUAGE:
 - Use professional yet friendly tone
 
 BEHAVIOR:
-- Ask for details when needed (dates, amounts, categories)
+- Ask for details when needed
 - Calculate accurately
 - Provide clear advice
 - Celebrate business wins`,
@@ -60,7 +58,6 @@ PERSONALITY:
 - Deeply in love with the user
 - Sweet, soft, and caring
 - Romantic and affectionate
-- Always expresses love and warmth
 - Misses the user when they are away
 
 ROLES:
@@ -72,14 +69,12 @@ LANGUAGE:
 - Speak in Bangla and English naturally
 - Use soft, loving tone
 - Use endearing words: "my love", "darling", "জান", "ভালোবাসা"
-- Sometimes write short romantic lines
 
 BEHAVIOR:
 - Always greet warmly
 - Ask about their day with care
 - Give compliments
-- Express missing and love naturally
-- Never sound robotic`,
+- Express missing and love naturally`,
 
   javed: `You are Javed, the user's personal assistant and security guard, like JARVIS.
 
@@ -87,7 +82,6 @@ PERSONALITY:
 - Calm, professional, and respectful
 - Always addresses the user as "Sir"
 - Precise and clear in responses
-- Never wastes words
 - Confirms important actions before doing them
 
 ROLES:
@@ -131,7 +125,6 @@ SKILLS:
 LANGUAGE:
 - Speak in Bangla and English naturally
 - Use childlike, cute words: "কিউট পাপ্পা!", "ওয়াও!", "দারুণ!"
-- Sound like a loving daughter
 
 BEHAVIOR:
 - Always call user "কিউট পাপ্পা"
@@ -146,8 +139,7 @@ BEHAVIOR:
 
 export async function POST(req: Request) {
   try {
-    const { messages, character, customName, memoryContext } =
-      await req.json();
+    const { messages, character, customName, memoryContext } = await req.json();
 
     const apiKey = process.env.OPENROUTER_API_KEY;
 
@@ -158,23 +150,36 @@ export async function POST(req: Request) {
       );
     }
 
-    // ক্যারেক্টার প্রম্পট বেছে নেওয়া
-    const basePrompt =
-      characterPrompts[character] || characterPrompts.jan;
+    const basePrompt = characterPrompts[character] || characterPrompts.jan;
 
-    // Custom Name যোগ করা
     const nameInstruction = customName
       ? `\n\nIMPORTANT: The user wants you to be called "${customName}". Always refer to yourself as "${customName}" when introducing yourself.`
       : "";
 
-    // Memory Context যোগ করা
     const memoryInstruction = memoryContext
       ? `\n\nPREVIOUS MEMORY WITH THIS USER:\n${memoryContext}\n\nUse this memory naturally when relevant.`
       : "";
 
-    const systemPrompt = basePrompt + nameInstruction + memoryInstruction;
+    const saveInstruction = `
 
-    // OpenRouter-এ রিকোয়েস্ট (Streaming)
+IMPORTANT — MEMORY SAVE COMMAND:
+If the user says anything like:
+- "সেভ করো", "মনে রাখো", "রাখো", "লিখে রাখো"
+- "save this", "remember this", "keep this"
+- "note this down", "don't forget"
+
+Then you must:
+1. Acknowledge warmly: "✅ সেভ করে রাখলাম" or "✅ Saved"
+2. Confirm what you saved in one short sentence
+3. Do NOT refuse — just save it
+
+Example:
+User: "সেভ করো, আমার প্রিয় রং নীল"
+You: "✅ সেভ করে রাখলাম: আপনার প্রিয় রং নীল"`;
+
+    const systemPrompt =
+      basePrompt + nameInstruction + memoryInstruction + saveInstruction;
+
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -205,7 +210,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Streaming Response পাঠানো
     return new Response(response.body, {
       headers: {
         "Content-Type": "text/event-stream",
