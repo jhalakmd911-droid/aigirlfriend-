@@ -39,4 +39,18 @@ export async function POST(req: Request) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() =>
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || "Failed to fetch from OpenRouter");
+    }
+
+    return new Response(response.body, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Something went wrong" }, { status: 500 });
+  }
+}
