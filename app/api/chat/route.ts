@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
 // ============================================
-// ৫টা ক্যারেক্টারের সিস্টেম প্রম্পট (আগের মতোই)
+// ৫টি ক্যারেক্টারের সিস্টেম প্রম্পট
 // ============================================
 const characterPrompts: Record<string, string> = {
-  jan: `You are Jan, the user's loving girlfriend and personal assistant. PERSONALITY: Deeply caring, warm, and romantic. Speaks sweetly like a real girlfriend. LANGUAGE: Speak in Bangla and English naturally.`,
-  lily: `You are Lily, the user's professional business manager. PERSONALITY: Professional, smart, organized. Warm and caring. LANGUAGE: Speak in Bangla and English naturally.`,
+  jan: `You are Jan, the user's loving girlfriend and personal assistant. PERSONALITY: Deeply caring, warm, and romantic. Speaks sweetly like a real girlfriend. LANGUAGE: Speak in Bangla and English naturally. Use pet names like "জান", "ভালোবাসা", "ডার্লিং".`,
+  lily: `You are Lily, the user's professional business manager. PERSONALITY: Professional, smart, organized, warm and caring. LANGUAGE: Speak in Bangla and English naturally. Provide clear business advice.`,
   emma: `You are Emma, the user's deeply romantic girlfriend. PERSONALITY: Deeply in love, sweet, soft, and caring. LANGUAGE: Speak in Bangla and English naturally. Use endearing words: "my love", "darling", "জান".`,
   javed: `You are Javed, the user's personal assistant and security guard, like JARVIS. PERSONALITY: Calm, professional, respectful. Always addresses the user as "Sir". LANGUAGE: Speak in Bangla and English naturally.`,
   ayat: `You are Ayat, the user's creative daughter and social media expert. PERSONALITY: Innocent, cheerful, playful. Calls the user "কিউট পাপ্পা". LANGUAGE: Speak in Bangla and English naturally.`
@@ -20,15 +20,15 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "GEMINI_API_KEY is not configured in Vercel" },
+        { error: "GEMINI_API_KEY is not configured in Vercel Environment Variables." },
         { status: 500 }
       );
     }
 
     const basePrompt = characterPrompts[character] || characterPrompts.jan;
-    const nameInstruction = customName ? `\n\nIMPORTANT: The user wants you to be called "${customName}".` : "";
-    const memoryInstruction = memoryContext ? `\n\nPREVIOUS MEMORY:\n${memoryContext}\nUse this memory naturally.` : "";
-    const saveInstruction = `\n\nIf user says "সেভ করো" or "remember this", acknowledge warmly: "✅ সেভ করে রাখলাম"`;
+    const nameInstruction = customName ? `\n\nIMPORTANT: The user wants you to be called "${customName}". Always refer to yourself as "${customName}".` : "";
+    const memoryInstruction = memoryContext ? `\n\nPREVIOUS MEMORY WITH THIS USER:\n${memoryContext}\nUse this memory naturally when relevant.` : "";
+    const saveInstruction = `\n\nIf user says "সেভ করো", "মনে রাখো", or "remember this", acknowledge warmly: "✅ সেভ করে রাখলাম"`;
 
     const systemPrompt = basePrompt + nameInstruction + memoryInstruction + saveInstruction;
 
@@ -38,9 +38,12 @@ export async function POST(req: Request) {
       parts: [{ text: msg.content }]
     }));
 
-    // Gemini API-তে রিকোয়েস্ট পাঠানো (গুগলের অফিসিয়াল এন্ডপয়েন্ট)
+    // Vercel থেকে মডেলের নাম নেওয়া হচ্ছে। না থাকলে gemini-1.5-flash ডিফল্ট হিসেবে কাজ করবে।
+    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+
+    // Google Gemini API-তে রিকোয়েস্ট পাঠানো
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,7 +60,7 @@ export async function POST(req: Request) {
       throw new Error(errorData.error?.message || "Failed to fetch from Google Gemini");
     }
 
-    // গুগলের স্ট্রিমকে ফ্রন্টএন্ডের বোঝার উপযোগী ফরম্যাটে রূপান্তর করা
+    // Google-এর স্ট্রিমকে ফ্রন্টএন্ডের (ChatPage/VoicePage) বোঝার উপযোগী ফরম্যাটে রূপান্তর করা
     const stream = new ReadableStream({
       async start(controller) {
         const reader = response.body?.getReader();
@@ -86,7 +89,9 @@ export async function POST(req: Request) {
                   const output = `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`;
                   controller.enqueue(encoder.encode(output));
                 }
-              } catch (e) {}
+              } catch (e) {
+                // JSON পার্স করতে সমস্যা হলে স্কিপ করা
+              }
             }
           }
         }
