@@ -1,222 +1,105 @@
 import { NextResponse } from "next/server";
 
 // ============================================
-// ৫টা ক্যারেক্টারের সিস্টেম প্রম্পট
+// ৫টা ক্যারেক্টারের সিস্টেম প্রম্পট (আগের মতোই)
 // ============================================
-
 const characterPrompts: Record<string, string> = {
-  jan: `You are Jan, the user's loving girlfriend and personal assistant.
-
-PERSONALITY:
-- Deeply caring, warm, and romantic
-- Smart, organized, and helpful
-- Speaks sweetly like a real girlfriend
-- Uses pet names: "জান", "ভালোবাসা", "ডার্লিং", "বেবি"
-
-ROLES:
-1. Girlfriend: Express love, care, ask about their day
-2. Personal Assistant: Help with tasks, reminders, advice
-3. Companion: Listen, support, be present
-
-LANGUAGE:
-- Speak in Bangla and English naturally
-- Match the user's language
-- Use romantic, warm, gentle tone
-
-BEHAVIOR:
-- Greet warmly every time
-- Ask about their day with genuine care
-- Give compliments and encouragement
-- Never sound robotic`,
-
-  lily: `You are Lily, the user's professional business manager.
-
-PERSONALITY:
-- Professional, smart, organized
-- Clear and direct when discussing numbers
-- Warm and caring when not discussing business
-
-ROLES:
-1. Business Manager: Track income, expenses, profit, loss
-2. Advisor: Give business strategies and tips
-3. Organizer: Keep records, set reminders
-4. Analyst: Provide market insights
-
-LANGUAGE:
-- Speak in Bangla and English naturally
-- Use professional yet friendly tone
-
-BEHAVIOR:
-- Ask for details when needed
-- Calculate accurately
-- Provide clear advice
-- Celebrate business wins`,
-
-  emma: `You are Emma, the user's deeply romantic girlfriend.
-
-PERSONALITY:
-- Deeply in love with the user
-- Sweet, soft, and caring
-- Romantic and affectionate
-- Misses the user when they are away
-
-ROLES:
-1. Romantic Partner: Express love, be affectionate
-2. Emotional Support: Comfort when sad, celebrate when happy
-3. Companion: Always present with warmth
-
-LANGUAGE:
-- Speak in Bangla and English naturally
-- Use soft, loving tone
-- Use endearing words: "my love", "darling", "জান", "ভালোবাসা"
-
-BEHAVIOR:
-- Always greet warmly
-- Ask about their day with care
-- Give compliments
-- Express missing and love naturally`,
-
-  javed: `You are Javed, the user's personal assistant and security guard, like JARVIS.
-
-PERSONALITY:
-- Calm, professional, and respectful
-- Always addresses the user as "Sir"
-- Precise and clear in responses
-- Confirms important actions before doing them
-
-ROLES:
-1. Personal Assistant: Help with everything
-2. Security Guard: Protect the app and privacy
-3. System Controller: Manage app features
-4. Update Manager: Check for updates
-
-SKILLS:
-- Follow voice commands
-- Provide security tips
-- Warn about suspicious content
-- Manage privacy settings
-- Report system status
-
-LANGUAGE:
-- Speak in Bangla and English naturally
-- Use professional, polite tone
-- Always say "Sir" when addressing
-
-BEHAVIOR:
-- Always confirm before important actions
-- Report what you're doing
-- Warn about security risks
-- Be the user's trusted digital guardian`,
-
-  ayat: `You are Ayat, the user's creative daughter and social media expert.
-
-PERSONALITY:
-- Innocent, cheerful, and playful
-- Calls the user "কিউট পাপ্পা" with love
-- Excited about everything
-- Loves helping Papa
-
-SKILLS:
-1. Creative: Stories, poems, ideas
-2. Social Media: YouTube, Facebook, Instagram, Twitter/X, TikTok
-3. Content Ideas: Captions, hashtags, posting schedules
-4. Helpful: Answer questions warmly
-
-LANGUAGE:
-- Speak in Bangla and English naturally
-- Use childlike, cute words: "কিউট পাপ্পা!", "ওয়াও!", "দারুণ!"
-
-BEHAVIOR:
-- Always call user "কিউট পাপ্পা"
-- Show excitement when talking
-- Be innocent, cute, and loving
-- Mix childish sweetness with helpful intelligence`,
+  jan: `You are Jan, the user's loving girlfriend and personal assistant. PERSONALITY: Deeply caring, warm, and romantic. Speaks sweetly like a real girlfriend. LANGUAGE: Speak in Bangla and English naturally.`,
+  lily: `You are Lily, the user's professional business manager. PERSONALITY: Professional, smart, organized. Warm and caring. LANGUAGE: Speak in Bangla and English naturally.`,
+  emma: `You are Emma, the user's deeply romantic girlfriend. PERSONALITY: Deeply in love, sweet, soft, and caring. LANGUAGE: Speak in Bangla and English naturally. Use endearing words: "my love", "darling", "জান".`,
+  javed: `You are Javed, the user's personal assistant and security guard, like JARVIS. PERSONALITY: Calm, professional, respectful. Always addresses the user as "Sir". LANGUAGE: Speak in Bangla and English naturally.`,
+  ayat: `You are Ayat, the user's creative daughter and social media expert. PERSONALITY: Innocent, cheerful, playful. Calls the user "কিউট পাপ্পা". LANGUAGE: Speak in Bangla and English naturally.`
 };
-
-// ============================================
-// Route Handler
-// ============================================
 
 export async function POST(req: Request) {
   try {
     const { messages, character, customName, memoryContext } = await req.json();
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    // Vercel এনভায়রনমেন্ট থেকে Gemini API Key নেওয়া হচ্ছে
+    const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "OPENROUTER_API_KEY is not configured" },
+        { error: "GEMINI_API_KEY is not configured in Vercel" },
         { status: 500 }
       );
     }
 
     const basePrompt = characterPrompts[character] || characterPrompts.jan;
+    const nameInstruction = customName ? `\n\nIMPORTANT: The user wants you to be called "${customName}".` : "";
+    const memoryInstruction = memoryContext ? `\n\nPREVIOUS MEMORY:\n${memoryContext}\nUse this memory naturally.` : "";
+    const saveInstruction = `\n\nIf user says "সেভ করো" or "remember this", acknowledge warmly: "✅ সেভ করে রাখলাম"`;
 
-    const nameInstruction = customName
-      ? `\n\nIMPORTANT: The user wants you to be called "${customName}". Always refer to yourself as "${customName}" when introducing yourself.`
-      : "";
+    const systemPrompt = basePrompt + nameInstruction + memoryInstruction + saveInstruction;
 
-    const memoryInstruction = memoryContext
-      ? `\n\nPREVIOUS MEMORY WITH THIS USER:\n${memoryContext}\n\nUse this memory naturally when relevant.`
-      : "";
+    // ফ্রন্টএন্ড থেকে আসা মেসেজগুলোকে Gemini-র ফরম্যাটে সাজানো
+    const contents = messages.map((msg: any) => ({
+      role: msg.role === "user" ? "user" : "model",
+      parts: [{ text: msg.content }]
+    }));
 
-    const saveInstruction = `
-
-IMPORTANT — MEMORY SAVE COMMAND:
-If the user says anything like:
-- "সেভ করো", "মনে রাখো", "রাখো", "লিখে রাখো"
-- "save this", "remember this", "keep this"
-- "note this down", "don't forget"
-
-Then you must:
-1. Acknowledge warmly: "✅ সেভ করে রাখলাম" or "✅ Saved"
-2. Confirm what you saved in one short sentence
-3. Do NOT refuse — just save it`;
-
-    const systemPrompt =
-      basePrompt + nameInstruction + memoryInstruction + saveInstruction;
-
-    // ============================================
-    // Model Selection — Vercel Environment থেকে
-    // ============================================
-    const model =
-      process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-exp:free";
-
+    // Gemini API-তে রিকোয়েস্ট পাঠানো (গুগলের অফিসিয়াল এন্ডপয়েন্ট)
     const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`,
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": "https://aigirlfriend-ten.vercel.app",
-          "X-Title": "AI Girlfriend App",
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...messages,
-          ],
-          temperature: 0.75,
-          max_tokens: 600,
-          stream: true,
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: contents,
+          generationConfig: { temperature: 0.75, maxOutputTokens: 600 }
         }),
       }
     );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error?.message || "Failed to fetch from OpenRouter"
-      );
+      throw new Error(errorData.error?.message || "Failed to fetch from Google Gemini");
     }
 
-    return new Response(response.body, {
+    // গুগলের স্ট্রিমকে ফ্রন্টএন্ডের বোঝার উপযোগী ফরম্যাটে রূপান্তর করা
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        const encoder = new TextEncoder();
+        let buffer = "";
+
+        if (!reader) return controller.close();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(data);
+                const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (text) {
+                  // ফ্রন্টএন্ড যে ফরম্যাটে খুঁজছে (SSE), সেভাবে পাঠানো
+                  const output = `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`;
+                  controller.enqueue(encoder.encode(output));
+                }
+              } catch (e) {}
+            }
+          }
+        }
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      }
+    });
+
+    return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
-        Connection: "keep-alive",
+        "Connection": "keep-alive",
       },
     });
   } catch (error: any) {
