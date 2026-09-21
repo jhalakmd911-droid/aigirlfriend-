@@ -71,6 +71,7 @@ export default function Home() {
       case "update": return <UpdatePage />;
       case "photos": return <PhotosPage />;
       case "memory": return <MemoryPage />;
+      case "settings": return <SecurityPage />; // আপাতত সিকিউরিটি পেজ দেখাবে, পরে আমরা আলাদা Settings পেজ বানাব
       default:
         return (
           <HomePage
