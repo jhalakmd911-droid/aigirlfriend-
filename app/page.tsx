@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Sidebar from "@/components/Sidebar";
+import OnboardingPage from "@/components/pages/OnboardingPage";
 import HomePage from "@/components/pages/HomePage";
 import ChatPage from "@/components/pages/ChatPage";
 import VoicePage from "@/components/pages/VoicePage";
@@ -20,12 +21,18 @@ const mobileNavItems = [
 ];
 
 export default function Home() {
+  const [showOnboarding, setShowOnboarding] = useState(true); // শুরুতে Onboarding দেখাবে
   const [activeTab, setActiveTab] = useState("home");
   const [profileChar, setProfileChar] = useState<string | null>(null);
 
   const handleNavigate = (tab: string, characterId?: string) => {
     setActiveTab(tab);
   };
+
+  // যদি Onboarding শেষ না হয়, শুধু Onboarding দেখাবে
+  if (showOnboarding) {
+    return <OnboardingPage onGetStarted={() => setShowOnboarding(false)} />;
+  }
 
   const renderPage = () => {
     if (profileChar) {
