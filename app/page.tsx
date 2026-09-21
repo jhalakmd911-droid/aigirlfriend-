@@ -8,6 +8,16 @@ import VoicePage from "@/components/pages/VoicePage";
 import UpdatePage from "@/components/pages/UpdatePage";
 import SecurityPage from "@/components/pages/SecurityPage";
 import ProfilePage from "@/components/pages/ProfilePage";
+import PhotosPage from "@/components/pages/PhotosPage";
+import MemoryPage from "@/components/pages/MemoryPage";
+
+const mobileNavItems = [
+  { id: "chat", label: "Chat", icon: "♡" },
+  { id: "voice", label: "Voice", icon: "◉" },
+  { id: "photos", label: "Photos", icon: "🖼️" },
+  { id: "memory", label: "Memory", icon: "🧠" },
+  { id: "security", label: "Security", icon: "🛡️" },
+];
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("home");
@@ -36,7 +46,8 @@ export default function Home() {
       case "voice": return <VoicePage />;
       case "security": return <SecurityPage />;
       case "update": return <UpdatePage />;
-      // পরবর্তী ধাপে আমরা Photos, Memory এবং Settings পেজ বানাব
+      case "photos": return <PhotosPage />;
+      case "memory": return <MemoryPage />;
       default:
         return (
           <HomePage
@@ -49,10 +60,30 @@ export default function Home() {
 
   return (
     <div className="app-layout">
+      {/* বড় স্ক্রিনের জন্য সাইডবার */}
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      
+      {/* মূল কনটেন্ট */}
       <main className="main-content">
         {renderPage()}
       </main>
+
+      {/* মোবাইলের জন্য নিচের নেভিগেশন বার */}
+      <nav className="mobile-bottom-nav">
+        {mobileNavItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => {
+              setProfileChar(null);
+              setActiveTab(item.id);
+            }}
+            className={`mobile-nav-item ${activeTab === item.id ? "active" : ""}`}
+          >
+            <span className="mobile-nav-icon">{item.icon}</span>
+            <span className="mobile-nav-label">{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
