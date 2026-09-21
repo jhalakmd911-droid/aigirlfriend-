@@ -6,9 +6,9 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { id: "home", label: "Home", icon: "⌂" },
-  { id: "chat", label: "Chat", icon: "♡" },
-  { id: "voice", label: "Voice", icon: "◉" },
+  { id: "home", label: "Home", icon: "🏠" },
+  { id: "chat", label: "Chat", icon: "💬" },
+  { id: "voice", label: "Voice", icon: "🎙️" },
   { id: "photos", label: "Photos", icon: "🖼️" },
   { id: "memory", label: "Memory", icon: "🧠" },
   { id: "settings", label: "Settings", icon: "⚙️" },
@@ -21,7 +21,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         <div className="logo">❤️</div>
         <span className="sidebar-title">AI Girlfriend</span>
       </div>
-      
+
       <nav className="sidebar-nav">
         {menuItems.map((item) => (
           <button
@@ -34,7 +34,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           </button>
         ))}
       </nav>
-      
+
       <div className="sidebar-footer">
         <div className="premium-card">
           <span>⭐ Premium Member</span>
