@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import OnboardingPage from "@/components/pages/OnboardingPage";
+import CharacterSelectPage from "@/components/pages/CharacterSelectPage";
 import HomePage from "@/components/pages/HomePage";
 import ChatPage from "@/components/pages/ChatPage";
 import VoicePage from "@/components/pages/VoicePage";
@@ -21,7 +22,8 @@ const mobileNavItems = [
 ];
 
 export default function Home() {
-  const [showOnboarding, setShowOnboarding] = useState(true); // শুরুতে Onboarding দেখাবে
+  // অ্যাপের স্টেট: onboarding -> characterSelect -> main
+  const [appState, setAppState] = useState<"onboarding" | "characterSelect" | "main">("onboarding");
   const [activeTab, setActiveTab] = useState("home");
   const [profileChar, setProfileChar] = useState<string | null>(null);
 
@@ -29,11 +31,25 @@ export default function Home() {
     setActiveTab(tab);
   };
 
-  // যদি Onboarding শেষ না হয়, শুধু Onboarding দেখাবে
-  if (showOnboarding) {
-    return <OnboardingPage onGetStarted={() => setShowOnboarding(false)} />;
+  // ১. Onboarding Screen
+  if (appState === "onboarding") {
+    return <OnboardingPage onGetStarted={() => setAppState("characterSelect")} />;
   }
 
+  // ২. Character Selection Screen
+  if (appState === "characterSelect") {
+    return (
+      <CharacterSelectPage 
+        onSelect={(charId) => {
+          setProfileChar(charId); // সিলেক্ট করা ক্যারেক্টারকে প্রোফাইলে সেট করা
+          setActiveTab("chat");   // চ্যাট ট্যাবে নিয়ে যাওয়া
+          setAppState("main");    // মূল অ্যাপে প্রবেশ
+        }} 
+      />
+    );
+  }
+
+  // ৩. Main App Screen
   const renderPage = () => {
     if (profileChar) {
       return (
@@ -67,15 +83,11 @@ export default function Home() {
 
   return (
     <div className="app-layout">
-      {/* বড় স্ক্রিনের জন্য সাইডবার */}
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-      
-      {/* মূল কনটেন্ট */}
       <main className="main-content">
         {renderPage()}
       </main>
 
-      {/* মোবাইলের জন্য নিচের নেভিগেশন বার */}
       <nav className="mobile-bottom-nav">
         {mobileNavItems.map((item) => (
           <button
