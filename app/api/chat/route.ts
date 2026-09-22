@@ -30,7 +30,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-exp:free",
+        model: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free",
         messages: [{ role: "system", content: systemPrompt }, ...messages],
         temperature: 0.75,
         max_tokens: 600,
