@@ -8,46 +8,21 @@ const characterPrompts: Record<string, string> = {
   ayat: `You are Ayat, the user's creative daughter. Innocent, cheerful, playful. Speak in Bangla and English naturally.`
 };
 
-// ============================================
-// সব ফ্রি মডেলের লিস্ট — শক্তিশালী ও বাংলা-সাপোর্টেড মডেল আগে
-// একটি বন্ধ হয়ে গেলে অটোমেটিক পরেরটি চেষ্টা হবে
-// ============================================
-const FREE_MODELS = [
-  "google/gemma-2-9b-it:free",
-  "google/gemma-2-27b-it:free",
-  "mistralai/mistral-nemo:free",
-  "mistralai/mistral-small-3.1-24b-instruct:free",
-  "mistralai/mistral-7b-instruct:free",
-  "qwen/qwen-2.5-7b-instruct:free",
-  "qwen/qwen-2.5-72b-instruct:free",
-  "qwen/qwq-32b:free",
-  "meta-llama/llama-3.2-3b-instruct:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "meta-llama/llama-4-maverick:free",
-  "meta-llama/llama-4-scout:free",
-  "microsoft/phi-3-mini-128k-instruct:free",
-  "microsoft/phi-3-medium-128k-instruct:free",
-  "deepseek/deepseek-chat:free",
-  "deepseek/deepseek-r1:free",
-  "deepseek/deepseek-r1-distill-llama-70b:free",
-  "nvidia/llama-3.1-nemotron-70b-instruct:free",
-  "nousresearch/hermes-3-llama-3.1-405b:free",
-  "cohere/command-r-plus:free",
-  "cohere/command-r:free",
-  "moonshotai/kimi-k2:free",
+// Google Gemini-র ফ্রি মডেলের লিস্ট — একটি বন্ধ হলে পরেরটি চেষ্টা হবে
+const GEMINI_MODELS = [
+  "gemini-2.0-flash-exp",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
 ];
 
-// ============================================
-// মূল API Route
-// ============================================
 export async function POST(req: Request) {
   try {
     const { messages, character, customName, memoryContext } = await req.json();
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "OPENROUTER_API_KEY is not configured." },
+        { error: "GEMINI_API_KEY is not configured." },
         { status: 500 }
       );
     }
@@ -58,75 +33,92 @@ export async function POST(req: Request) {
       : "";
     const systemPrompt = basePrompt + memoryInstruction;
 
+    const contents = messages.map((msg: any) => ({
+      role: msg.role === "user" ? "user" : "model",
+      parts: [{ text: msg.content }],
+    }));
+
     let response: Response | null = null;
     let workingModel = "";
-    const failedModels: string[] = [];
 
-    // এক এক করে প্রতিটি ফ্রি মডেল চেষ্টা করা
-    for (const model of FREE_MODELS) {
-      try {
-        const res = await fetch(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "HTTP-Referer": "https://aigirlfriend-ten.vercel.app",
-              "X-Title": "AI Girlfriend App",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: model,
-              messages: [
-                { role: "system", content: systemPrompt },
-                ...messages,
-              ],
-              temperature: 0.75,
-              max_tokens: 600,
-              stream: true,
-            }),
-          }
-        );
-
-        if (res.ok) {
-          response = res;
-          workingModel = model;
-          // ✅ সিগনাল: কোন মডেল কাজ করছে, তা Vercel লগে দেখা যাবে
-          console.log(`[AI Girlfriend] ✅ Working model: ${model}`);
-          break;
-        } else {
-          failedModels.push(model);
-          console.warn(`[AI Girlfriend] ❌ Model failed: ${model}`);
+    for (const model of GEMINI_MODELS) {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents: contents,
+            generationConfig: { temperature: 0.75, maxOutputTokens: 600 },
+          }),
         }
-      } catch (e) {
-        failedModels.push(model);
-        console.warn(`[AI Girlfriend] ❌ Model error: ${model}`);
+      );
+
+      if (res.ok) {
+        response = res;
+        workingModel = model;
+        console.log(`[AI Girlfriend] ✅ Working Gemini model: ${model}`);
+        break;
+      } else {
+        console.warn(`[AI Girlfriend] ❌ Gemini model failed: ${model}`);
       }
     }
 
     if (!response || !response.ok) {
-      // সব মডেল ফেইল — ক্লায়েন্টকে জানানো হচ্ছে
-      console.error(`[AI Girlfriend] ⚠️ All ${FREE_MODELS.length} free models failed.`);
       return NextResponse.json(
-        {
-          error:
-            "⚠️ All free AI models are currently unavailable. Please try again in a few minutes. (OpenRouter may have temporarily disabled their free tier.)",
-        },
+        { error: "All Gemini models failed. Please try again later." },
         { status: 503 }
       );
     }
 
-    // সফল মডেলের নাম হেডারে পাঠিয়ে দেওয়া — ফ্রন্টএন্ড চাইলে দেখাতে পারে
-    return new Response(response.body, {
+    // Gemini-র SSE ফরম্যাটকে ChatPage/VoicePage-এর বোঝার উপযোগী করা
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = response!.body?.getReader();
+        const decoder = new TextDecoder();
+        const encoder = new TextEncoder();
+        let buffer = "";
+
+        if (!reader) return controller.close();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              try {
+                const parsed = JSON.parse(data);
+                const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (text) {
+                  const output = `data: ${JSON.stringify({
+                    choices: [{ delta: { content: text } }],
+                  })}\n\n`;
+                  controller.enqueue(encoder.encode(output));
+                }
+              } catch (e) {}
+            }
+          }
+        }
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
-        "X-Working-Model": workingModel,
       },
     });
   } catch (error: any) {
-    console.error("[AI Girlfriend] Chat API Error:", error);
+    console.error("[AI Girlfriend] Error:", error);
     return NextResponse.json(
       { error: error.message || "Something went wrong" },
       { status: 500 }
