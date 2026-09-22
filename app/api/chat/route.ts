@@ -14,33 +14,62 @@ export async function POST(req: Request) {
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     if (!apiKey) {
-      return NextResponse.json({ error: "OPENROUTER_API_KEY is not configured." }, { status: 500 });
+      return NextResponse.json(
+        { error: "OPENROUTER_API_KEY is not configured." },
+        { status: 500 }
+      );
     }
 
     const basePrompt = characterPrompts[character] || characterPrompts.jan;
-    const memoryInstruction = memoryContext ? `\nPREVIOUS MEMORY:\n${memoryContext}` : "";
+    const memoryInstruction = memoryContext
+      ? `\nPREVIOUS MEMORY:\n${memoryContext}`
+      : "";
     const systemPrompt = basePrompt + memoryInstruction;
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://aigirlfriend-ten.vercel.app",
-        "X-Title": "AI Girlfriend App",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free",
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
-        temperature: 0.75,
-        max_tokens: 600,
-        stream: true,
-      }),
-    });
+    // একাধিক ফ্রি মডেল — একটি ব্যর্থ হলে পরেরটি চেষ্টা করবে
+    const fallbackModels = [
+      "google/gemma-2-9b-it:free",
+      "mistralai/mistral-nemo:free",
+      "qwen/qwen-2.5-7b-instruct:free",
+      "microsoft/phi-3-mini-128k-instruct:free",
+    ];
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || "Failed to fetch from OpenRouter");
+    let response: Response | null = null;
+
+    for (const model of fallbackModels) {
+      const res = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "HTTP-Referer": "https://aigirlfriend-ten.vercel.app",
+            "X-Title": "AI Girlfriend App",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              ...messages,
+            ],
+            temperature: 0.75,
+            max_tokens: 600,
+            stream: true,
+          }),
+        }
+      );
+
+      if (res.ok) {
+        response = res;
+        break;
+      }
+    }
+
+    if (!response || !response.ok) {
+      throw new Error(
+        "All free models are currently unavailable. Please try again later."
+      );
     }
 
     return new Response(response.body, {
@@ -51,6 +80,10 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Something went wrong" }, { status: 500 });
+    console.error("Chat API Error:", error);
+    return NextResponse.json(
+      { error: error.message || "Something went wrong" },
+      { status: 500 }
+    );
   }
 }
