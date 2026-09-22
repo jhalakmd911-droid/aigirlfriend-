@@ -12,15 +12,15 @@ const characterPrompts: Record<string, string> = {
 };
 
 // ============================================
-// Google Gemini-র সচল ও শক্তিশালী ফ্রি মডেলগুলো
+// Google Gemini-র সচল ফ্রি মডেলের লিস্ট
 // একটি ব্যর্থ হলে অটোমেটিক পরেরটি চেষ্টা হবে
 // ============================================
 const GEMINI_MODELS = [
-  "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
-  "gemini-1.5-flash",
-  "gemini-1.5-flash-8b",
-  "gemini-1.5-pro",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.6-flash",
+  "gemini-3.7-flash",
+  "gemini-3.1-flash-lite",
 ];
 
 // ============================================
@@ -86,8 +86,14 @@ export async function POST(req: Request) {
             safetySettings: [
               { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
               { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+              {
+                category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                threshold: "BLOCK_NONE",
+              },
+              {
+                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                threshold: "BLOCK_NONE",
+              },
             ],
           }),
         });
@@ -147,8 +153,7 @@ export async function POST(req: Request) {
 
               try {
                 const parsed = JSON.parse(data);
-                const text =
-                  parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+                const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (text) {
                   const output = `data: ${JSON.stringify({
                     choices: [{ delta: { content: text } }],
