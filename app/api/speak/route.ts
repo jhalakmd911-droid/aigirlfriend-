@@ -6,7 +6,7 @@ export async function POST(req: Request) {
     const apiKey = process.env.ELEVENLABS_API_KEY;
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
+      return NextResponse.json({ error: 'API key not configured in Vercel' }, { status: 500 });
     }
 
     // "Rachel" নামের একটি জনপ্রিয় মহিলা ভয়েস আইডি
@@ -31,8 +31,9 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('ElevenLabs error:', errorText);
-      return NextResponse.json({ error: 'Failed to generate audio' }, { status: response.status });
+      console.error('ElevenLabs detailed error:', errorText);
+      // ✅ আসল এররটি ফ্রন্টএন্ডে পাঠানো হচ্ছে
+      return NextResponse.json({ error: `ElevenLabs Error: ${response.status} - ${errorText}` }, { status: response.status });
     }
 
     const audioBuffer = await response.arrayBuffer();
@@ -41,8 +42,8 @@ export async function POST(req: Request) {
         'Content-Type': 'audio/mpeg',
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in speak route:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: `Internal server error: ${error.message}` }, { status: 500 });
   }
 }
