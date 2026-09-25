@@ -94,13 +94,37 @@ export default function VoicePage() {
   const [showCharacterMenu, setShowCharacterMenu] = useState(false);
   const [memoryCount, setMemoryCount] = useState(0);
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(true);
+  const [callDuration, setCallDuration] = useState(0);
+  const [isCallActive, setIsCallActive] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationRef = useRef<{ role: string; content: string }[]>([]);
   const voiceStateRef = useRef<VoiceState>("idle");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
+
+  // Call timer
+  useEffect(() => {
+    if (isCallActive) {
+      timerRef.current = setInterval(() => {
+        setCallDuration((d) => d + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      setCallDuration(0);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [isCallActive]);
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -256,6 +280,7 @@ export default function VoicePage() {
 
   const speak = (text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) { setVoiceState("idle"); return; }
+    if (isMuted || !isSpeakerOn) { setVoiceState("idle"); return; }
     window.speechSynthesis.cancel();
     const char = getCharacter();
     const utterance = new SpeechSynthesisUtterance(text);
@@ -284,6 +309,7 @@ export default function VoicePage() {
     if (voiceState === "listening") { try { recognitionRef.current?.stop(); } catch (e) {} setVoiceState("idle"); return; }
     if (voiceState === "thinking") return;
     setError(""); setTranscript(""); setAiResponse("");
+    setIsCallActive(true);
     try { recognitionRef.current?.start(); } catch (err) { setError("Could not start microphone. Try again."); }
   };
 
@@ -293,6 +319,7 @@ export default function VoicePage() {
     setVoiceState("idle");
     setTranscript("");
     setAiResponse("");
+    setIsCallActive(false);
   };
 
   const switchCharacter = (id: string) => {
@@ -304,6 +331,7 @@ export default function VoicePage() {
     setVoiceState("idle");
     setTranscript("");
     setAiResponse("");
+    setIsCallActive(false);
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -351,7 +379,7 @@ export default function VoicePage() {
           <h1 className="gradient-text" style={{ fontFamily: "var(--font-display)", fontSize: "26px", fontWeight: 800, letterSpacing: "-0.6px" }}>Voice Call</h1>
           <p style={{ marginTop: "5px", fontSize: "13px", color: "var(--muted)" }}>Talk with your AI companion</p>
         </div>
-        <button type="button" className="btn btn-secondary" style={{ padding: "8px 14px", borderRadius: "12px", fontSize: "12px", minHeight: "auto" }}>🧠 {memoryCount}</button>
+        <div className="btn btn-secondary" style={{ padding: "8px 14px", borderRadius: "12px", fontSize: "12px", minHeight: "auto" }}>🧠 {memoryCount}</div>
       </header>
 
       {/* Character Switcher */}
@@ -391,58 +419,146 @@ export default function VoicePage() {
       </div>
 
       {/* Main Call Area */}
-      <section className="card" style={{ padding: "28px 18px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", width: "200px", height: "200px", borderRadius: "50%", background: "radial-gradient(circle, rgba(255,45,149,0.18), transparent 70%)", top: "-80px", left: "-60px" }} />
-        <div style={{ position: "absolute", width: "200px", height: "200px", borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,0.18), transparent 70%)", bottom: "-100px", right: "-60px" }} />
+      <section className="card" style={{ padding: "28px 18px", textAlign: "center", position: "relative", overflow: "hidden", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ position: "absolute", width: "260px", height: "260px", borderRadius: "50%", background: "radial-gradient(circle, rgba(255,45,149,0.20), transparent 70%)", top: "-100px", left: "-80px" }} />
+        <div style={{ position: "absolute", width: "260px", height: "260px", borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,0.20), transparent 70%)", bottom: "-120px", right: "-80px" }} />
 
-        <h2 style={{ fontSize: "18px", marginBottom: "20px", position: "relative", color: "#fff" }}>
-          {voiceState === "idle" && "Tap to speak"}
-          {voiceState === "listening" && "Listening..."}
-          {voiceState === "thinking" && "Thinking..."}
-          {voiceState === "speaking" && "Speaking..."}
-        </h2>
-
-        {/* Big Mic Button / Avatar */}
-        <div style={{ position: "relative", marginBottom: "24px" }}>
-          <button onClick={() => setShowPhotoMenu(true)} style={{ position: "absolute", top: "0", right: "0", width: "36px", height: "36px", borderRadius: "50%", background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.5)", color: "#fff", fontSize: "16px", cursor: "pointer", zIndex: 2 }}>📷</button>
-
-          <button onClick={toggleListening} disabled={!isSupported || voiceState === "thinking"} style={{ width: "140px", height: "140px", borderRadius: "50%", background: voiceState !== "idle" ? "linear-gradient(135deg, #FF2D95, #8B5CF6)" : "rgba(139,92,246,0.18)", border: voiceState !== "idle" ? "2px solid rgba(255,45,149,0.6)" : "2px solid rgba(139,92,246,0.35)", display: "grid", placeItems: "center", margin: "0 auto", cursor: !isSupported || voiceState === "thinking" ? "not-allowed" : "pointer", fontSize: "56px", transition: "all 0.3s ease", boxShadow: voiceState !== "idle" ? "0 0 60px rgba(255,45,149,0.6)" : "0 10px 30px rgba(139,92,246,0.2)", position: "relative", zIndex: 1, color: "#fff", opacity: !isSupported ? 0.5 : 1, overflow: "hidden" }}>
+        {/* Big Avatar / Mic Button */}
+        <div style={{ position: "relative", marginBottom: "22px", zIndex: 1 }}>
+          <button
+            onClick={toggleListening}
+            disabled={!isSupported || voiceState === "thinking"}
+            style={{
+              width: "170px",
+              height: "170px",
+              borderRadius: "50%",
+              background: voiceState !== "idle" ? "linear-gradient(135deg, #FF2D95, #8B5CF6)" : "rgba(139,92,246,0.15)",
+              border: voiceState !== "idle" ? "3px solid rgba(255,45,149,0.6)" : "3px solid rgba(139,92,246,0.35)",
+              display: "grid",
+              placeItems: "center",
+              margin: "0 auto",
+              cursor: !isSupported || voiceState === "thinking" ? "not-allowed" : "pointer",
+              fontSize: "68px",
+              transition: "all 0.3s ease",
+              boxShadow: voiceState !== "idle" ? "0 0 70px rgba(255,45,149,0.65)" : "0 12px 35px rgba(139,92,246,0.25)",
+              color: "#fff",
+              opacity: !isSupported ? 0.5 : 1,
+              overflow: "hidden",
+              position: "relative",
+            }}
+          >
             {charPhotos[selectedCharacter] && charPhotos[selectedCharacter].startsWith("data:") ? (
               <img src={charPhotos[selectedCharacter]} alt={char.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : voiceState === "speaking" ? "🔊" : "🎤"}
+            ) : voiceState === "speaking" ? "🔊" : voiceState === "listening" ? "🎙️" : "🎤"}
           </button>
+
+          {/* Camera button */}
+          <button onClick={() => setShowPhotoMenu(true)} style={{ position: "absolute", top: "10px", right: "10px", width: "38px", height: "38px", borderRadius: "50%", background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.5)", color: "#fff", fontSize: "16px", cursor: "pointer", zIndex: 3 }}>📷</button>
 
           {voiceState === "listening" && (
             <>
-              <div style={{ position: "absolute", width: "160px", height: "160px", borderRadius: "50%", border: "2px solid rgba(255,45,149,0.5)", top: "50%", left: "50%", transform: "translate(-50%, -50%)", animation: "pulse 1.5s ease-out infinite", pointerEvents: "none" }} />
-              <div style={{ position: "absolute", width: "180px", height: "180px", borderRadius: "50%", border: "2px solid rgba(255,45,149,0.25)", top: "50%", left: "50%", transform: "translate(-50%, -50%)", animation: "pulse 1.5s ease-out 0.5s infinite", pointerEvents: "none" }} />
+              <div style={{ position: "absolute", width: "190px", height: "190px", borderRadius: "50%", border: "2px solid rgba(255,45,149,0.5)", top: "50%", left: "50%", transform: "translate(-50%, -50%)", animation: "pulse 1.6s ease-out infinite", pointerEvents: "none" }} />
+              <div style={{ position: "absolute", width: "220px", height: "220px", borderRadius: "50%", border: "2px solid rgba(255,45,149,0.25)", top: "50%", left: "50%", transform: "translate(-50%, -50%)", animation: "pulse 1.6s ease-out 0.6s infinite", pointerEvents: "none" }} />
             </>
           )}
 
           <style>{`
             @keyframes pulse {
-              0% { width: 140px; height: 140px; opacity: 1; }
-              100% { width: 240px; height: 240px; opacity: 0; }
+              0% { width: 170px; height: 170px; opacity: 1; }
+              100% { width: 280px; height: 280px; opacity: 0; }
             }
           `}</style>
         </div>
 
-        <p style={{ fontSize: "13px", color: "var(--muted)", position: "relative", minHeight: "20px" }}>
-          {voiceState === "idle" && "Tap the microphone and speak"}
-          {voiceState === "listening" && "I'm listening to you..."}
-          {voiceState === "thinking" && "Let me think..."}
-          {voiceState === "speaking" && "Tap again to stop"}
-        </p>
+        {/* Status Text */}
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#fff", marginBottom: "6px" }}>
+            {voiceState === "idle" && "Tap to speak"}
+            {voiceState === "listening" && "Listening..."}
+            {voiceState === "thinking" && "Thinking..."}
+            {voiceState === "speaking" && "Speaking..."}
+          </h2>
+          <p style={{ fontSize: "13px", color: "var(--muted)", marginBottom: "4px" }}>
+            {voiceState === "idle" && "Tap the microphone and speak"}
+            {voiceState === "listening" && "I'm listening to you..."}
+            {voiceState === "thinking" && "Let me think..."}
+            {voiceState === "speaking" && "Tap again to stop"}
+          </p>
+          {isCallActive && (
+            <p style={{ fontSize: "12px", color: "#22c55e", fontWeight: 600, marginTop: "6px" }}>
+              ● Voice Call • {formatDuration(callDuration)}
+            </p>
+          )}
 
-        {/* Call Controls */}
-        <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "24px", position: "relative" }}>
-          <button onClick={endCall} className="btn btn-secondary" style={{ width: "50px", height: "50px", borderRadius: "50%", padding: 0, minHeight: "auto", background: "rgba(239,68,68,0.2)", borderColor: "rgba(239,68,68,0.5)", color: "#ef4444", fontSize: "20px" }}>📞</button>
-          <button onClick={toggleListening} className="btn btn-secondary" style={{ width: "50px", height: "50px", borderRadius: "50%", padding: 0, minHeight: "auto", fontSize: "20px" }}>🎤</button>
+          {error && (
+            <p style={{ marginTop: "12px", fontSize: "12px", color: "#ef4444" }}>⚠️ {error}</p>
+          )}
         </div>
 
-        {error && (
-          <p style={{ marginTop: "12px", fontSize: "12px", color: "#ef4444", position: "relative" }}>⚠️ {error}</p>
-        )}
+        {/* Call Controls — Mute / Speaker / End / Video */}
+        <div style={{ display: "flex", justifyContent: "center", gap: "14px", marginTop: "28px", position: "relative", zIndex: 1 }}>
+          {/* Mute */}
+          <button
+            onClick={() => setIsMuted((m) => !m)}
+            className="btn btn-secondary"
+            style={{
+              width: "56px", height: "56px", borderRadius: "50%", padding: 0, minHeight: "auto",
+              background: isMuted ? "linear-gradient(135deg, #ef4444, #dc2626)" : "rgba(139,92,246,0.18)",
+              border: isMuted ? "none" : "1px solid rgba(139,92,246,0.45)",
+              color: "#fff", fontSize: "20px",
+              boxShadow: isMuted ? "0 0 22px rgba(239,68,68,0.5)" : "none",
+            }}
+            title="Mute"
+          >
+            {isMuted ? "🔇" : "🎤"}
+          </button>
+
+          {/* Speaker */}
+          <button
+            onClick={() => setIsSpeakerOn((s) => !s)}
+            className="btn btn-secondary"
+            style={{
+              width: "56px", height: "56px", borderRadius: "50%", padding: 0, minHeight: "auto",
+              background: isSpeakerOn ? "linear-gradient(135deg, #22D3EE, #3B82F6)" : "rgba(139,92,246,0.18)",
+              border: isSpeakerOn ? "none" : "1px solid rgba(139,92,246,0.45)",
+              color: "#fff", fontSize: "20px",
+              boxShadow: isSpeakerOn ? "0 0 22px rgba(34,211,238,0.4)" : "none",
+            }}
+            title="Speaker"
+          >
+            {isSpeakerOn ? "🔊" : "🔈"}
+          </button>
+
+          {/* End Call */}
+          <button
+            onClick={endCall}
+            className="btn"
+            style={{
+              width: "64px", height: "64px", borderRadius: "50%", padding: 0, minHeight: "auto",
+              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+              color: "#fff", fontSize: "24px",
+              boxShadow: "0 0 30px rgba(239,68,68,0.55)",
+            }}
+            title="End Call"
+          >
+            📞
+          </button>
+
+          {/* Video */}
+          <button
+            onClick={() => alert("ভিডিও কল ফিচার শীঘ্রই আসছে!")}
+            className="btn btn-secondary"
+            style={{
+              width: "56px", height: "56px", borderRadius: "50%", padding: 0, minHeight: "auto",
+              background: "rgba(139,92,246,0.18)",
+              border: "1px solid rgba(139,92,246,0.45)",
+              color: "#fff", fontSize: "20px",
+            }}
+            title="Video"
+          >
+            📹
+          </button>
+        </div>
       </section>
 
       {/* Transcript & Response */}
@@ -450,13 +566,13 @@ export default function VoicePage() {
         <section className="card" style={{ padding: "16px", marginTop: "16px" }}>
           <h3 style={{ fontSize: "14px", marginBottom: "12px", color: "#fff", fontWeight: 600 }}>Conversation</h3>
           {transcript && (
-            <div style={{ padding: "10px 14px", borderRadius: "12px", background: "linear-gradient(135deg, rgba(255,45,149,0.25), rgba(139,92,246,0.25))", marginBottom: "10px", border: "1px solid rgba(255,45,149,0.4)" }}>
+            <div className="bubble-user" style={{ padding: "10px 14px", marginBottom: "10px" }}>
               <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", marginBottom: "4px" }}>You said:</p>
               <p style={{ fontSize: "14px", color: "#fff" }}>{transcript}</p>
             </div>
           )}
           {aiResponse && (
-            <div style={{ padding: "10px 14px", borderRadius: "12px", background: "rgba(139,92,246,0.18)", border: "1px solid rgba(139,92,246,0.35)" }}>
+            <div className="bubble-ai" style={{ padding: "10px 14px" }}>
               <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", marginBottom: "4px" }}>{displayName} said:</p>
               <p style={{ fontSize: "14px", color: "#fff" }}>{aiResponse}</p>
             </div>
