@@ -47,54 +47,6 @@ declare global {
   }
 }
 
-const getBestVoice = (charId: string, availableVoices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
-  // ✅ ফিক্স: যদি ভয়েস লিস্ট খালি থাকে, তবে সরাসরি ব্রাউজার থেকে ভয়েস নিয়ে আসুন
-  const voicesToUse = availableVoices.length > 0 ? availableVoices : (typeof window !== "undefined" ? window.speechSynthesis.getVoices() : []);
-  if (!voicesToUse || voicesToUse.length === 0) return null;
-
-  const femaleKeywords = [
-    "female", "woman", "girl", "heera", "swara", "zira", "samantha",
-    "victoria", "karen", "moira", "tessa", "veena", "kanya", "lekha",
-    "bengali", "bangla"
-  ];
-  const isFemale = (v: SpeechSynthesisVoice) => {
-    const n = v.name.toLowerCase();
-    return femaleKeywords.some((k) => n.includes(k));
-  };
-
-  // Javed = পুরুষ ভয়েস
-  if (charId === "javed") {
-    const maleNames = ["Google UK English Male", "Microsoft David", "Daniel", "Alex", "Rishi"];
-    for (const name of maleNames) {
-      const found = voicesToUse.find((v) => v.name.toLowerCase().includes(name.toLowerCase()));
-      if (found) return found;
-    }
-  }
-
-  // Jan, Lily, Emma, Ayat = মহিলা ভয়েস
-  if (charId !== "javed") {
-    // ১. বাংলা (বাংলাদেশ) — প্রথম প্রায়োরিটি
-    const bdBangla = voicesToUse.find((v) =>
-      v.lang.toLowerCase().includes("bn-bd") ||
-      v.lang.toLowerCase().includes("bn_bd") ||
-      v.lang.toLowerCase().includes("bn")
-    );
-    if (bdBangla) return bdBangla;
-
-    // ২. হিন্দি মহিলা
-    const hindiFemale = voicesToUse.find((v) =>
-      v.lang.toLowerCase().includes("hi") && isFemale(v)
-    );
-    if (hindiFemale) return hindiFemale;
-
-    // ৩. যেকোনো মহিলা ভয়েস
-    const anyFemale = voicesToUse.find((v) => isFemale(v));
-    if (anyFemale) return anyFemale;
-  }
-
-  return voicesToUse[0];
-};
-
 export default function VoicePage() {
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
   const [selectedCharacter, setSelectedCharacter] = useState("jan");
@@ -111,15 +63,14 @@ export default function VoicePage() {
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
   const [isCallActive, setIsCallActive] = useState(false);
-  
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [debugInfo, setDebugInfo] = useState({ allVoices: "", selected: "" });
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationRef = useRef<{ role: string; content: string }[]>([]);
   const voiceStateRef = useRef<VoiceState>("idle");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // ✅ নতুন: ElevenLabs অডিও প্লে করার জন্য রেফারেন্স
+  const audioRef = useRef<HTMLAudioElement | null>(null); 
 
   useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
 
@@ -140,29 +91,6 @@ export default function VoicePage() {
     const s = (seconds % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-
-    const loadVoices = () => {
-      const availableVoices = window.speechSynthesis.getVoices();
-      if (availableVoices.length > 0) {
-        setVoices(availableVoices);
-        setDebugInfo(prev => ({ ...prev, allVoices: availableVoices.map(v => `${v.name} (${v.lang})`).join(" | ") }));
-      }
-    };
-
-    loadVoices();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-
-    return () => {
-      if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = null;
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -251,6 +179,7 @@ export default function VoicePage() {
     return () => {
       if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch (e) {} }
       if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     };
   }, []);
 
@@ -302,45 +231,62 @@ export default function VoicePage() {
     }
   };
 
-  const speak = (text: string) => {
-    if (typeof window === "undefined" || !window.speechSynthesis) { setVoiceState("idle"); return; }
+  // ✅ পরিবর্তিত speak ফাংশন: এখন ElevenLabs API কল করবে
+  const speak = async (text: string) => {
     if (isMuted || !isSpeakerOn) { setVoiceState("idle"); return; }
-    window.speechSynthesis.cancel();
-    const char = getCharacter();
-    const utterance = new SpeechSynthesisUtterance(text);
     
-    // ✅ ফিক্স: স্টেট খালি থাকলে সরাসরি ব্রাউজার থেকে ভয়েস নেওয়া হবে
-    const currentVoices = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
-    const selectedVoice = getBestVoice(char.id, currentVoices);
-    
-    if (selectedVoice) { 
-      utterance.voice = selectedVoice; 
-      utterance.lang = selectedVoice.lang; 
-      setDebugInfo(prev => ({ ...prev, selected: `${selectedVoice.name} (${selectedVoice.lang})` }));
+    // আগের চলমান অডিও বন্ধ করা
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
     }
-    else { 
-      utterance.lang = char.voiceLang || "bn-BD"; 
-      setDebugInfo(prev => ({ ...prev, selected: `Default (${char.voiceLang})` }));
+    if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
+
+    setVoiceState("speaking");
+
+    try {
+      const response = await fetch('/api/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setVoiceState("idle");
+        URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
+      };
+
+      audio.onerror = (e) => {
+        console.error("Audio playback error:", e);
+        setVoiceState("idle");
+        URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error("Failed to fetch or play audio:", error);
+      setVoiceState("idle");
+      setError("Voice generation failed. Check your API key.");
     }
-
-    switch (char.id) {
-      case "jan": utterance.pitch = 1.55; utterance.rate = 0.92; utterance.volume = 1.0; break;
-      case "lily": utterance.pitch = 1.4; utterance.rate = 1.0; utterance.volume = 1.0; break;
-      case "emma": utterance.pitch = 1.65; utterance.rate = 0.88; utterance.volume = 1.0; break;
-      case "javed": utterance.pitch = 0.85; utterance.rate = 1.0; utterance.volume = 1.0; break;
-      case "ayat": utterance.pitch = 1.7; utterance.rate = 1.05; utterance.volume = 1.0; break;
-      default: utterance.pitch = 1.5; utterance.rate = 1.0; utterance.volume = 1.0;
-    }
-
-    utterance.onstart = () => setVoiceState("speaking");
-    utterance.onend = () => setVoiceState("idle");
-    utterance.onerror = (event) => { console.error("TTS Error:", event); setVoiceState("idle"); };
-
-    try { window.speechSynthesis.speak(utterance); } catch (err) { console.error("Speak failed:", err); setVoiceState("idle"); }
   };
 
   const toggleListening = () => {
-    if (voiceState === "speaking") { window.speechSynthesis.cancel(); setVoiceState("idle"); return; }
+    if (voiceState === "speaking") { 
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      setVoiceState("idle"); 
+      return; 
+    }
     if (voiceState === "listening") { try { recognitionRef.current?.stop(); } catch (e) {} setVoiceState("idle"); return; }
     if (voiceState === "thinking") return;
     setError(""); setTranscript(""); setAiResponse("");
@@ -350,6 +296,7 @@ export default function VoicePage() {
 
   const endCall = () => {
     if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     try { recognitionRef.current?.abort(); } catch (e) {}
     setVoiceState("idle");
     setTranscript("");
@@ -359,6 +306,7 @@ export default function VoicePage() {
 
   const switchCharacter = (id: string) => {
     if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     try { recognitionRef.current?.abort(); } catch (e) {}
     conversationRef.current = [];
     setSelectedCharacter(id);
@@ -530,7 +478,7 @@ export default function VoicePage() {
           )}
         </div>
 
-        {/* Call Controls — Mute / Speaker / End / Video */}
+        {/* Call Controls */}
         <div style={{ display: "flex", justifyContent: "center", gap: "14px", marginTop: "28px", position: "relative", zIndex: 1 }}>
           <button
             onClick={() => setIsMuted((m) => !m)}
@@ -633,14 +581,6 @@ export default function VoicePage() {
           </div>
         </div>
       )}
-
-      {/* ✅ Temporary Mobile Debug Panel - ভয়েস কাজ করা মাত্র আমরা এটি মুছে ফেলব */}
-      <div style={{ marginTop: "20px", padding: "10px", background: "#111", color: "#00ff00", fontSize: "10px", borderRadius: "8px", wordBreak: "break-all", maxHeight: "150px", overflowY: "auto", border: "1px solid #333" }}>
-        <p style={{ margin: "0 0 5px 0", fontWeight: "bold" }}>Debug Info:</p>
-        <p style={{ margin: "0 0 5px 0" }}>Selected: {debugInfo.selected}</p>
-        <p style={{ margin: "0" }}>All Voices: {debugInfo.allVoices}</p>
-      </div>
-
     </div>
   );
 }
