@@ -16,7 +16,11 @@ import {
   SecurityLogEntry,
 } from "@/lib/securityManager";
 
-export default function SecurityPage() {
+interface SecurityPageProps {
+  onBack?: () => void;
+}
+
+export default function SecurityPage({ onBack }: SecurityPageProps) {
   const [secHasPIN, setSecHasPIN] = useState(false);
   const [secLockEnabled, setSecLockEnabled] = useState(false);
   const [secAutoLock, setSecAutoLock] = useState(5);
@@ -115,7 +119,25 @@ export default function SecurityPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", paddingTop: "20px", paddingBottom: "110px" }}>
-      
+
+      {/* Back Button */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="btn btn-secondary"
+          style={{
+            alignSelf: "flex-start",
+            padding: "8px 16px",
+            borderRadius: "12px",
+            fontSize: "13px",
+            minHeight: "auto",
+            marginBottom: "16px",
+          }}
+        >
+          ← Back to Settings
+        </button>
+      )}
+
       {/* Header */}
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "22px 0 18px", marginBottom: "16px" }}>
         <div>
@@ -236,45 +258,4 @@ export default function SecurityPage() {
             <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "8px", textAlign: "center" }}>PIN পরিবর্তন</h3>
             <input type="tel" inputMode="numeric" maxLength={4} value={oldPinInput} onChange={(e) => setOldPinInput(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="পুরনো PIN" style={{ width: "100%", padding: "16px", borderRadius: "12px", fontSize: "20px", letterSpacing: "6px", textAlign: "center", marginBottom: "12px" }} />
             <input type="tel" inputMode="numeric" maxLength={4} value={newPinInput} onChange={(e) => setNewPinInput(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="নতুন PIN" style={{ width: "100%", padding: "16px", borderRadius: "12px", fontSize: "20px", letterSpacing: "6px", textAlign: "center", marginBottom: "12px" }} />
-            {pinError && <p style={{ fontSize: "12px", color: "#ef4444", textAlign: "center", marginBottom: "12px" }}>⚠️ {pinError}</p>}
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button onClick={handleChangePIN} className="btn btn-primary" style={{ flex: 1, padding: "14px" }}>✅ Change</button>
-              <button onClick={() => setShowChangeModal(false)} className="btn btn-secondary" style={{ flex: 1, padding: "14px" }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Security Logs Modal */}
-      {showLogsModal && (
-        <div className="modal-overlay" onClick={() => setShowLogsModal(false)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "8px" }}>📋 Security Logs</h3>
-            <p style={{ color: "var(--muted)", fontSize: "12px", marginBottom: "16px" }}>মোট {secLogs.length}টি ইভেন্ট</p>
-            {secLogs.length === 0 ? (
-              <p style={{ color: "var(--muted)", fontSize: "13px", textAlign: "center", padding: "30px 20px" }}>এখনো কোনো লগ নেই</p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
-                {[...secLogs].reverse().map((log) => (
-                  <div key={log.id} style={{ padding: "10px 12px", borderRadius: "10px", background: "rgba(139,92,246,0.12)", border: `1px solid ${getLogColor(log.type)}40`, display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                    <span style={{ fontSize: "18px" }}>{getLogIcon(log.type)}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: "13px", color: "#fff" }}>{log.message}</p>
-                      <p style={{ fontSize: "10px", color: "var(--muted)", marginTop: "2px" }}>{log.date}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: "10px" }}>
-              {secLogs.length > 0 && (
-                <button onClick={handleClearLogs} className="btn btn-secondary" style={{ flex: 1, padding: "12px", color: "#ef4444" }}>🗑️ Clear</button>
-              )}
-              <button onClick={() => setShowLogsModal(false)} className="btn btn-primary" style={{ flex: 1, padding: "12px" }}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+            {pinError && <p style={{ fontSize: "12px", color: "#ef4444", textAlign: "center", marginBottom: "12px" }}>
