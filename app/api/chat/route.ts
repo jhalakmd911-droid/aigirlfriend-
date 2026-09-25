@@ -21,6 +21,8 @@ const GEMINI_MODELS = [
   "gemini-3.6-flash",
   "gemini-3.7-flash",
   "gemini-3.1-flash-lite",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
 ];
 
 // ============================================
@@ -31,8 +33,8 @@ export async function POST(req: Request) {
     const { messages, character, customName, memoryContext } = await req.json();
     const apiKey = process.env.GEMINI_API_KEY;
 
-    // --- API Key যাচাই ---
-    if (!apiKey || typeof apiKey !== "string" || !apiKey.startsWith("AIza")) {
+    // --- API Key যাচাই (নতুন ও পুরনো উভয় ফরম্যাট সাপোর্ট করে) ---
+    if (!apiKey || typeof apiKey !== "string" || apiKey.length < 20) {
       console.error("[AI Girlfriend] ❌ GEMINI_API_KEY is missing or invalid.");
       return NextResponse.json(
         { error: "⚠️ GEMINI_API_KEY is not configured properly in Vercel." },
