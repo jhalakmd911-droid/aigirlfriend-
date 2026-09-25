@@ -47,7 +47,6 @@ declare global {
   }
 }
 
-// ✅ পরিবর্তন ৩: getBestVoice এখন availableVoices প্যারামিটার নেয়
 const getBestVoice = (charId: string, availableVoices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
   if (!availableVoices || availableVoices.length === 0) return null;
 
@@ -71,7 +70,7 @@ const getBestVoice = (charId: string, availableVoices: SpeechSynthesisVoice[]): 
 
   // Jan, Lily, Emma, Ayat = মহিলা ভয়েস
   if (charId !== "javed") {
-    // ১. বাংলা (বাংলাদেশ) — প্রথম প্রায়োরিটি
+    // ১. বাংলা (বাংলাদেশ)
     const bdBangla = availableVoices.find((v) =>
       v.lang.toLowerCase().includes("bn-bd") ||
       v.lang.toLowerCase().includes("bn_bd")
@@ -131,8 +130,10 @@ export default function VoicePage() {
   const [callDuration, setCallDuration] = useState(0);
   const [isCallActive, setIsCallActive] = useState(false);
   
-  // ✅ পরিবর্তন ১: ভয়েসগুলো সেভ করার জন্য নতুন স্টেট
+  // ✅ নতুন স্টেট: ভয়েসগুলো সেভ করার জন্য
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  // ✅ নতুন স্টেট: মোবাইলে ডিবাগ দেখার জন্য
+  const [debugInfo, setDebugInfo] = useState({ allVoices: "", selected: "" });
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationRef = useRef<{ role: string; content: string }[]>([]);
@@ -160,7 +161,7 @@ export default function VoicePage() {
     return `${m}:${s}`;
   };
 
-  // ✅ পরিবর্তন ২: ভয়েস লোড করার useEffect আপডেট করা হয়েছে
+  // ✅ আপডেট করা useEffect: ভয়েস লোড করার জন্য
   useEffect(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
 
@@ -168,8 +169,8 @@ export default function VoicePage() {
       const availableVoices = window.speechSynthesis.getVoices();
       if (availableVoices.length > 0) {
         setVoices(availableVoices);
-        // ডিবাগ করার জন্য কনসোলে লগ
-        console.log("Available Voices on this device:", availableVoices.map(v => `${v.name} (${v.lang})`));
+        // মোবাইলে দেখানোর জন্য ডিবাগ ডাটা সেভ করা
+        setDebugInfo(prev => ({ ...prev, allVoices: availableVoices.map(v => `${v.name} (${v.lang})`).join(" | ") }));
       }
     };
 
@@ -330,18 +331,18 @@ export default function VoicePage() {
     const char = getCharacter();
     const utterance = new SpeechSynthesisUtterance(text);
     
-    // ✅ পরিবর্তন ৪: getBestVoice-এ voices স্টেটটি পাস করা হচ্ছে
+    // ✅ আপডেট: voices স্টেট পাস করা হচ্ছে
     const selectedVoice = getBestVoice(char.id, voices);
     
     if (selectedVoice) { 
       utterance.voice = selectedVoice; 
       utterance.lang = selectedVoice.lang; 
-      // ডিবাগ করার জন্য কনসোলে লগ
-      console.log("Selected Voice for", char.name, ":", selectedVoice.name, selectedVoice.lang);
+      // মোবাইলে দেখানোর জন্য ডিবাগ ডাটা সেভ করা
+      setDebugInfo(prev => ({ ...prev, selected: `${selectedVoice.name} (${selectedVoice.lang})` }));
     }
     else { 
       utterance.lang = char.voiceLang || "bn-BD"; 
-      console.log("No specific voice found, using default lang:", utterance.lang);
+      setDebugInfo(prev => ({ ...prev, selected: `Default (${char.voiceLang})` }));
     }
 
     switch (char.id) {
@@ -654,6 +655,14 @@ export default function VoicePage() {
           </div>
         </div>
       )}
+
+      {/* ✅ Temporary Mobile Debug Panel - শুধু টেস্ট করার জন্য */}
+      <div style={{ marginTop: "20px", padding: "10px", background: "#111", color: "#00ff00", fontSize: "10px", borderRadius: "8px", wordBreak: "break-all", maxHeight: "150px", overflowY: "auto", border: "1px solid #333" }}>
+        <p style={{ margin: "0 0 5px 0", fontWeight: "bold" }}>Debug Info:</p>
+        <p style={{ margin: "0 0 5px 0" }}>Selected: {debugInfo.selected}</p>
+        <p style={{ margin: "0" }}>All Voices: {debugInfo.allVoices}</p>
+      </div>
+
     </div>
   );
 }
