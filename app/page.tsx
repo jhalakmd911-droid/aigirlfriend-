@@ -39,8 +39,8 @@ export default function Home() {
     return (
       <CharacterSelectPage
         onSelect={(charId) => {
-          setProfileChar(charId);
-          setActiveTab("chat");
+          setProfileChar(null);
+          setActiveTab("home");
           setAppState("main");
         }}
       />
@@ -69,6 +69,10 @@ export default function Home() {
       case "photos": return <PhotosPage />;
       case "memory": return <MemoryPage />;
       case "settings": return <SettingsPage onNavigate={handleNavigate} />;
+      case "profile":
+        // Profile ট্যাব নেই, তবে ভবিষ্যতে দরকার হলে ব্যবহার হবে
+        return <HomePage onNavigate={handleNavigate} onOpenProfile={setProfileChar} />;
+      case "home":
       default:
         return (
           <HomePage
