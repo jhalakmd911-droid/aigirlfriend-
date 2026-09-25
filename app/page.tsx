@@ -12,6 +12,7 @@ import SecurityPage from "@/components/pages/SecurityPage";
 import ProfilePage from "@/components/pages/ProfilePage";
 import PhotosPage from "@/components/pages/PhotosPage";
 import MemoryPage from "@/components/pages/MemoryPage";
+import SettingsPage from "@/components/pages/SettingsPage";
 
 const mobileNavItems = [
   { id: "chat", label: "Chat", icon: "♡" },
@@ -22,7 +23,6 @@ const mobileNavItems = [
 ];
 
 export default function Home() {
-  // অ্যাপের স্টেট: onboarding -> characterSelect -> main
   const [appState, setAppState] = useState<"onboarding" | "characterSelect" | "main">("onboarding");
   const [activeTab, setActiveTab] = useState("home");
   const [profileChar, setProfileChar] = useState<string | null>(null);
@@ -31,25 +31,22 @@ export default function Home() {
     setActiveTab(tab);
   };
 
-  // ১. Onboarding Screen
   if (appState === "onboarding") {
     return <OnboardingPage onGetStarted={() => setAppState("characterSelect")} />;
   }
 
-  // ২. Character Selection Screen
   if (appState === "characterSelect") {
     return (
-      <CharacterSelectPage 
+      <CharacterSelectPage
         onSelect={(charId) => {
-          setProfileChar(charId); // সিলেক্ট করা ক্যারেক্টারকে প্রোফাইলে সেট করা
-          setActiveTab("chat");   // চ্যাট ট্যাবে নিয়ে যাওয়া
-          setAppState("main");    // মূল অ্যাপে প্রবেশ
-        }} 
+          setProfileChar(charId);
+          setActiveTab("chat");
+          setAppState("main");
+        }}
       />
     );
   }
 
-  // ৩. Main App Screen
   const renderPage = () => {
     if (profileChar) {
       return (
@@ -71,7 +68,7 @@ export default function Home() {
       case "update": return <UpdatePage />;
       case "photos": return <PhotosPage />;
       case "memory": return <MemoryPage />;
-      case "settings": return <SecurityPage />; // আপাতত সিকিউরিটি পেজ দেখাবে, পরে আমরা আলাদা Settings পেজ বানাব
+      case "settings": return <SettingsPage onNavigate={handleNavigate} />;
       default:
         return (
           <HomePage
