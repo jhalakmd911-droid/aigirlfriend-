@@ -68,13 +68,20 @@ export default function Home() {
     }
 
     switch (activeTab) {
-      case "chat": return <ChatPage />;
-      case "voice": return <VoicePage />;
-      case "security": return <SecurityPage />;
-      case "update": return <UpdatePage />;
-      case "photos": return <PhotosPage />;
-      case "memory": return <MemoryPage />;
-      case "settings": return <SettingsPage onNavigate={handleNavigate} />;
+      case "chat":
+        return <ChatPage />;
+      case "voice":
+        return <VoicePage />;
+      case "security":
+        return <SecurityPage onBack={goHome} />;
+      case "update":
+        return <UpdatePage />;
+      case "photos":
+        return <PhotosPage />;
+      case "memory":
+        return <MemoryPage />;
+      case "settings":
+        return <SettingsPage onNavigate={handleNavigate} />;
       case "home":
       default:
         return (
@@ -91,9 +98,8 @@ export default function Home() {
   return (
     <div className="app-layout">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+
       <main className="main-content">
-        
-        {/* Floating Back-to-Home Button */}
         {showHomeButton && (
           <button
             onClick={goHome}
