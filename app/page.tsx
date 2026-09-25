@@ -19,7 +19,7 @@ const mobileNavItems = [
   { id: "voice", label: "Voice", icon: "◉" },
   { id: "photos", label: "Photos", icon: "🖼️" },
   { id: "memory", label: "Memory", icon: "🧠" },
-  { id: "security", label: "Security", icon: "🛡️" },
+  { id: "settings", label: "Settings", icon: "⚙️" },
 ];
 
 export default function Home() {
