@@ -21,11 +21,11 @@ interface Character {
 }
 
 const characters: Character[] = [
-  { id: "jan", name: "Jan", icon: "💫", subtitle: "Girlfriend & Assistant", voiceLang: "bn-BD", voicePitch: 1.35, voiceRate: 0.92 },
-  { id: "lily", name: "Lily", icon: "💼", subtitle: "Business Manager", voiceLang: "bn-BD", voicePitch: 1.15, voiceRate: 1.0 },
-  { id: "emma", name: "Emma", icon: "💕", subtitle: "Romantic Girlfriend", voiceLang: "bn-BD", voicePitch: 1.45, voiceRate: 0.88 },
+  { id: "jan", name: "Jan", icon: "💫", subtitle: "Girlfriend & Assistant", voiceLang: "bn-BD", voicePitch: 1.55, voiceRate: 0.92 },
+  { id: "lily", name: "Lily", icon: "💼", subtitle: "Business Manager", voiceLang: "bn-BD", voicePitch: 1.4, voiceRate: 1.0 },
+  { id: "emma", name: "Emma", icon: "💕", subtitle: "Romantic Girlfriend", voiceLang: "bn-BD", voicePitch: 1.65, voiceRate: 0.88 },
   { id: "javed", name: "Javed", icon: "🤖", subtitle: "Personal Assistant", voiceLang: "bn-BD", voicePitch: 0.85, voiceRate: 1.0 },
-  { id: "ayat", name: "Ayat", icon: "✨", subtitle: "Creative & Social", voiceLang: "bn-BD", voicePitch: 1.55, voiceRate: 1.05 },
+  { id: "ayat", name: "Ayat", icon: "✨", subtitle: "Creative & Social", voiceLang: "bn-BD", voicePitch: 1.7, voiceRate: 1.05 },
 ];
 
 const emojiOptions = ["💫", "💼", "💕", "🤖", "✨", "🌸", "🌙", "🎀", "🦋", "⭐", "🌟", "💐"];
@@ -52,26 +52,16 @@ const getBestVoice = (charId: string): SpeechSynthesisVoice | null => {
   const voices = window.speechSynthesis.getVoices();
   if (voices.length === 0) return null;
 
-  if (charId !== "javed") {
-    const banglaFemale = voices.find((v) => v.lang.toLowerCase().includes("bn") && (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("heera") || v.name.toLowerCase().includes("swara") || v.name.toLowerCase().includes("bangla") || v.name.toLowerCase().includes("bengali")));
-    if (banglaFemale) return banglaFemale;
-  }
-  const banglaVoice = voices.find((v) => v.lang.toLowerCase().includes("bn"));
-  if (banglaVoice) return banglaVoice;
-  const banglaLocale = voices.find((v) => v.lang.toLowerCase().startsWith("bn") || v.lang.toLowerCase().includes("bengali"));
-  if (banglaLocale) return banglaLocale;
+  const femaleKeywords = [
+    "female", "woman", "girl", "heera", "swara", "zira", "samantha",
+    "victoria", "karen", "moira", "tessa", "veena", "kanya", "lekha",
+  ];
+  const isFemale = (v: SpeechSynthesisVoice) => {
+    const n = v.name.toLowerCase();
+    return femaleKeywords.some((k) => n.includes(k));
+  };
 
-  if (charId !== "javed") {
-    const hindiFemale = voices.find((v) => v.lang.toLowerCase().includes("hi") && (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("swara") || v.name.toLowerCase().includes("heera")));
-    if (hindiFemale) return hindiFemale;
-  }
-  if (charId !== "javed") {
-    const englishFemaleNames = ["Google UK English Female", "Google US English", "Samantha", "Victoria", "Karen", "Moira", "Tessa"];
-    for (const name of englishFemaleNames) {
-      const found = voices.find((v) => v.name.toLowerCase().includes(name.toLowerCase()));
-      if (found) return found;
-    }
-  }
+  // Javed = পুরুষ ভয়েস
   if (charId === "javed") {
     const maleNames = ["Google UK English Male", "Microsoft David", "Daniel", "Alex", "Rishi"];
     for (const name of maleNames) {
@@ -79,6 +69,49 @@ const getBestVoice = (charId: string): SpeechSynthesisVoice | null => {
       if (found) return found;
     }
   }
+
+  // Jan, Lily, Emma, Ayat = মহিলা ভয়েস
+  if (charId !== "javed") {
+    // ১. বাংলা (বাংলাদেশ) — প্রথম প্রায়োরিটি
+    const bdBangla = voices.find((v) =>
+      v.lang.toLowerCase().includes("bn-bd") ||
+      v.lang.toLowerCase().includes("bn_bd")
+    );
+    if (bdBangla) return bdBangla;
+
+    // ২. বাংলা (ভারত)
+    const inBangla = voices.find((v) =>
+      v.lang.toLowerCase().includes("bn-in") ||
+      v.lang.toLowerCase().includes("bn_in") ||
+      v.lang.toLowerCase().startsWith("bn")
+    );
+    if (inBangla) return inBangla;
+
+    // ৩. হিন্দি মহিলা
+    const hindiFemale = voices.find((v) =>
+      v.lang.toLowerCase().includes("hi") && isFemale(v)
+    );
+    if (hindiFemale) return hindiFemale;
+
+    // ৪. ইংরেজি (India) মহিলা
+    const inEnglishFemale = voices.find((v) =>
+      v.lang.toLowerCase().includes("en-in") && isFemale(v)
+    );
+    if (inEnglishFemale) return inEnglishFemale;
+
+    // ৫. Google US/UK Female
+    const googleFemale = voices.find((v) =>
+      v.name.toLowerCase().includes("google") &&
+      v.lang.toLowerCase().includes("en") &&
+      isFemale(v)
+    );
+    if (googleFemale) return googleFemale;
+
+    // ৬. যেকোনো মহিলা ভয়েস
+    const anyFemale = voices.find((v) => isFemale(v));
+    if (anyFemale) return anyFemale;
+  }
+
   return voices[0];
 };
 
@@ -107,7 +140,6 @@ export default function VoicePage() {
 
   useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
 
-  // Call timer
   useEffect(() => {
     if (isCallActive) {
       timerRef.current = setInterval(() => {
@@ -289,12 +321,12 @@ export default function VoicePage() {
     else { utterance.lang = char.voiceLang || "bn-BD"; }
 
     switch (char.id) {
-      case "jan": utterance.pitch = 1.35; utterance.rate = 0.92; utterance.volume = 1.0; break;
-      case "lily": utterance.pitch = 1.15; utterance.rate = 1.0; utterance.volume = 1.0; break;
-      case "emma": utterance.pitch = 1.45; utterance.rate = 0.88; utterance.volume = 1.0; break;
+      case "jan": utterance.pitch = 1.55; utterance.rate = 0.92; utterance.volume = 1.0; break;
+      case "lily": utterance.pitch = 1.4; utterance.rate = 1.0; utterance.volume = 1.0; break;
+      case "emma": utterance.pitch = 1.65; utterance.rate = 0.88; utterance.volume = 1.0; break;
       case "javed": utterance.pitch = 0.85; utterance.rate = 1.0; utterance.volume = 1.0; break;
-      case "ayat": utterance.pitch = 1.55; utterance.rate = 1.05; utterance.volume = 1.0; break;
-      default: utterance.pitch = 1.2; utterance.rate = 1.0; utterance.volume = 1.0;
+      case "ayat": utterance.pitch = 1.7; utterance.rate = 1.05; utterance.volume = 1.0; break;
+      default: utterance.pitch = 1.5; utterance.rate = 1.0; utterance.volume = 1.0;
     }
 
     utterance.onstart = () => setVoiceState("speaking");
@@ -497,7 +529,6 @@ export default function VoicePage() {
 
         {/* Call Controls — Mute / Speaker / End / Video */}
         <div style={{ display: "flex", justifyContent: "center", gap: "14px", marginTop: "28px", position: "relative", zIndex: 1 }}>
-          {/* Mute */}
           <button
             onClick={() => setIsMuted((m) => !m)}
             className="btn btn-secondary"
@@ -513,7 +544,6 @@ export default function VoicePage() {
             {isMuted ? "🔇" : "🎤"}
           </button>
 
-          {/* Speaker */}
           <button
             onClick={() => setIsSpeakerOn((s) => !s)}
             className="btn btn-secondary"
@@ -529,7 +559,6 @@ export default function VoicePage() {
             {isSpeakerOn ? "🔊" : "🔈"}
           </button>
 
-          {/* End Call */}
           <button
             onClick={endCall}
             className="btn"
@@ -544,7 +573,6 @@ export default function VoicePage() {
             📞
           </button>
 
-          {/* Video */}
           <button
             onClick={() => alert("ভিডিও কল ফিচার শীঘ্রই আসছে!")}
             className="btn btn-secondary"
