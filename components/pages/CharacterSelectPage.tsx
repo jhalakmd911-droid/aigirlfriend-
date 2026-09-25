@@ -4,6 +4,7 @@ import { useState } from "react";
 
 interface CharacterSelectPageProps {
   onSelect: (characterId: string) => void;
+  onBack?: () => void;
 }
 
 const characters = [
@@ -16,7 +17,7 @@ const characters = [
 
 const categories = ["All", "Popular", "Anime", "Realistic", "Fantasy"];
 
-export default function CharacterSelectPage({ onSelect }: CharacterSelectPageProps) {
+export default function CharacterSelectPage({ onSelect, onBack }: CharacterSelectPageProps) {
   const [activeCategory, setActiveCategory] = useState("All");
 
   const filteredCharacters = activeCategory === "All"
@@ -26,6 +27,24 @@ export default function CharacterSelectPage({ onSelect }: CharacterSelectPagePro
   return (
     <div style={{ minHeight: "100vh", padding: "30px 20px", display: "flex", flexDirection: "column" }}>
       
+      {/* Back Button */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="btn btn-secondary"
+          style={{
+            alignSelf: "flex-start",
+            padding: "8px 16px",
+            borderRadius: "12px",
+            fontSize: "13px",
+            minHeight: "auto",
+            marginBottom: "20px",
+          }}
+        >
+          ← Back
+        </button>
+      )}
+
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: "24px" }}>
         <h1 className="gradient-text" style={{ fontSize: "26px", fontWeight: 800, marginBottom: "6px" }}>
@@ -55,7 +74,6 @@ export default function CharacterSelectPage({ onSelect }: CharacterSelectPagePro
         {filteredCharacters.map((char) => (
           <div key={char.id} className="card" style={{ padding: "16px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
             
-            {/* Avatar */}
             <div style={{
               width: "100px", height: "100px", borderRadius: "50%",
               background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
@@ -66,11 +84,9 @@ export default function CharacterSelectPage({ onSelect }: CharacterSelectPagePro
               {char.icon}
             </div>
 
-            {/* Info */}
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#fff", marginBottom: "4px" }}>{char.name}</h3>
             <p style={{ fontSize: "11px", color: "var(--muted)", marginBottom: "16px" }}>{char.subtitle}</p>
 
-            {/* Select Button */}
             <button
               onClick={() => onSelect(char.id)}
               className="btn btn-primary"
