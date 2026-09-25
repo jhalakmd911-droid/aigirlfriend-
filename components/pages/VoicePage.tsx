@@ -63,13 +63,15 @@ export default function VoicePage() {
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
   const [isCallActive, setIsCallActive] = useState(false);
+  
+  // ✅ টেক্সট ইনপুটের জন্য নতুন স্টেট
+  const [textInput, setTextInput] = useState("");
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationRef = useRef<{ role: string; content: string }[]>([]);
   const voiceStateRef = useRef<VoiceState>("idle");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // ✅ নতুন: ElevenLabs অডিও প্লে করার জন্য রেফারেন্স
   const audioRef = useRef<HTMLAudioElement | null>(null); 
 
   useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
@@ -146,7 +148,12 @@ export default function VoicePage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) { setIsSupported(false); setError("Voice not supported. Please use Chrome browser."); return; }
+    if (!SpeechRecognition) { 
+      setIsSupported(false); 
+      // এরর মেসেজটি পরিবর্তন করা হয়েছে যাতে বোঝা যায় কেন কাজ করছে না
+      setError("Voice recognition not supported on this browser. Please use the text box below to test."); 
+      return; 
+    }
 
     const recognition = new SpeechRecognition();
     recognition.lang = "bn-BD";
@@ -231,17 +238,10 @@ export default function VoicePage() {
     }
   };
 
-  // ✅ পরিবর্তিত speak ফাংশন: এখন ElevenLabs API কল করবে
+  // ✅ পরিবর্তিত speak ফাংশন: ElevenLabs API কল করবে
   const speak = async (text: string) => {
     if (isMuted || !isSpeakerOn) { setVoiceState("idle"); return; }
-    
-    // আগের চলমান অডিও বন্ধ করা
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
-
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     setVoiceState("speaking");
 
     try {
@@ -277,7 +277,7 @@ export default function VoicePage() {
     } catch (error) {
       console.error("Failed to fetch or play audio:", error);
       setVoiceState("idle");
-      setError("Voice generation failed. Check your API key.");
+      setError("Voice generation failed. Check your API key or network.");
     }
   };
 
@@ -289,6 +289,8 @@ export default function VoicePage() {
     }
     if (voiceState === "listening") { try { recognitionRef.current?.stop(); } catch (e) {} setVoiceState("idle"); return; }
     if (voiceState === "thinking") return;
+    if (!isSupported) { setError("Voice recognition not supported on this browser. Please use the text box below to test."); return; }
+    
     setError(""); setTranscript(""); setAiResponse("");
     setIsCallActive(true);
     try { recognitionRef.current?.start(); } catch (err) { setError("Could not start microphone. Try again."); }
@@ -412,22 +414,15 @@ export default function VoicePage() {
             onClick={toggleListening}
             disabled={!isSupported || voiceState === "thinking"}
             style={{
-              width: "170px",
-              height: "170px",
-              borderRadius: "50%",
+              width: "170px", height: "170px", borderRadius: "50%",
               background: voiceState !== "idle" ? "linear-gradient(135deg, #FF2D95, #8B5CF6)" : "rgba(139,92,246,0.15)",
               border: voiceState !== "idle" ? "3px solid rgba(255,45,149,0.6)" : "3px solid rgba(139,92,246,0.35)",
-              display: "grid",
-              placeItems: "center",
-              margin: "0 auto",
+              display: "grid", placeItems: "center", margin: "0 auto",
               cursor: !isSupported || voiceState === "thinking" ? "not-allowed" : "pointer",
-              fontSize: "68px",
-              transition: "all 0.3s ease",
+              fontSize: "68px", transition: "all 0.3s ease",
               boxShadow: voiceState !== "idle" ? "0 0 70px rgba(255,45,149,0.65)" : "0 12px 35px rgba(139,92,246,0.25)",
-              color: "#fff",
-              opacity: !isSupported ? 0.5 : 1,
-              overflow: "hidden",
-              position: "relative",
+              color: "#fff", opacity: !isSupported ? 0.5 : 1,
+              overflow: "hidden", position: "relative",
             }}
           >
             {charPhotos[selectedCharacter] && charPhotos[selectedCharacter].startsWith("data:") ? (
@@ -476,6 +471,43 @@ export default function VoicePage() {
           {error && (
             <p style={{ marginTop: "12px", fontSize: "12px", color: "#ef4444" }}>⚠️ {error}</p>
           )}
+        </div>
+
+        {/* ✅ টেক্সট ইনপুট ফলব্যাক (মাইক্রোফোন কাজ না করলে এখানে টাইপ করে টেস্ট করুন) */}
+        <div style={{ marginTop: "20px", display: "flex", gap: "10px", width: "100%", maxWidth: "400px", margin: "20px auto 0", position: "relative", zIndex: 2 }}>
+          <input
+            type="text"
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            placeholder="Type here to test AI voice..."
+            style={{
+              flex: 1, padding: "12px", borderRadius: "12px",
+              border: "1px solid rgba(139,92,246,0.5)",
+              background: "rgba(0,0,0,0.4)", color: "#fff", outline: "none", fontSize: "14px"
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && textInput.trim()) {
+                sendToAI(textInput.trim());
+                setTextInput("");
+                setTranscript(textInput.trim()); // ট্রান্সক্রিপ্টে দেখানোর জন্য
+                setIsCallActive(true);
+              }
+            }}
+          />
+          <button
+            onClick={() => {
+              if (textInput.trim()) {
+                setTranscript(textInput.trim()); // ট্রান্সক্রিপ্টে দেখানোর জন্য
+                sendToAI(textInput.trim());
+                setTextInput("");
+                setIsCallActive(true);
+              }
+            }}
+            className="btn btn-primary"
+            style={{ padding: "12px 20px", minHeight: "auto", borderRadius: "12px" }}
+          >
+            Send
+          </button>
         </div>
 
         {/* Call Controls */}
