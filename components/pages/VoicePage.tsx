@@ -47,10 +47,9 @@ declare global {
   }
 }
 
-const getBestVoice = (charId: string): SpeechSynthesisVoice | null => {
-  if (typeof window === "undefined" || !window.speechSynthesis) return null;
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length === 0) return null;
+// ✅ পরিবর্তন ৩: getBestVoice এখন availableVoices প্যারামিটার নেয়
+const getBestVoice = (charId: string, availableVoices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
+  if (!availableVoices || availableVoices.length === 0) return null;
 
   const femaleKeywords = [
     "female", "woman", "girl", "heera", "swara", "zira", "samantha",
@@ -65,7 +64,7 @@ const getBestVoice = (charId: string): SpeechSynthesisVoice | null => {
   if (charId === "javed") {
     const maleNames = ["Google UK English Male", "Microsoft David", "Daniel", "Alex", "Rishi"];
     for (const name of maleNames) {
-      const found = voices.find((v) => v.name.toLowerCase().includes(name.toLowerCase()));
+      const found = availableVoices.find((v) => v.name.toLowerCase().includes(name.toLowerCase()));
       if (found) return found;
     }
   }
@@ -73,14 +72,14 @@ const getBestVoice = (charId: string): SpeechSynthesisVoice | null => {
   // Jan, Lily, Emma, Ayat = মহিলা ভয়েস
   if (charId !== "javed") {
     // ১. বাংলা (বাংলাদেশ) — প্রথম প্রায়োরিটি
-    const bdBangla = voices.find((v) =>
+    const bdBangla = availableVoices.find((v) =>
       v.lang.toLowerCase().includes("bn-bd") ||
       v.lang.toLowerCase().includes("bn_bd")
     );
     if (bdBangla) return bdBangla;
 
     // ২. বাংলা (ভারত)
-    const inBangla = voices.find((v) =>
+    const inBangla = availableVoices.find((v) =>
       v.lang.toLowerCase().includes("bn-in") ||
       v.lang.toLowerCase().includes("bn_in") ||
       v.lang.toLowerCase().startsWith("bn")
@@ -88,19 +87,19 @@ const getBestVoice = (charId: string): SpeechSynthesisVoice | null => {
     if (inBangla) return inBangla;
 
     // ৩. হিন্দি মহিলা
-    const hindiFemale = voices.find((v) =>
+    const hindiFemale = availableVoices.find((v) =>
       v.lang.toLowerCase().includes("hi") && isFemale(v)
     );
     if (hindiFemale) return hindiFemale;
 
     // ৪. ইংরেজি (India) মহিলা
-    const inEnglishFemale = voices.find((v) =>
+    const inEnglishFemale = availableVoices.find((v) =>
       v.lang.toLowerCase().includes("en-in") && isFemale(v)
     );
     if (inEnglishFemale) return inEnglishFemale;
 
     // ৫. Google US/UK Female
-    const googleFemale = voices.find((v) =>
+    const googleFemale = availableVoices.find((v) =>
       v.name.toLowerCase().includes("google") &&
       v.lang.toLowerCase().includes("en") &&
       isFemale(v)
@@ -108,11 +107,11 @@ const getBestVoice = (charId: string): SpeechSynthesisVoice | null => {
     if (googleFemale) return googleFemale;
 
     // ৬. যেকোনো মহিলা ভয়েস
-    const anyFemale = voices.find((v) => isFemale(v));
+    const anyFemale = availableVoices.find((v) => isFemale(v));
     if (anyFemale) return anyFemale;
   }
 
-  return voices[0];
+  return availableVoices[0];
 };
 
 export default function VoicePage() {
@@ -131,6 +130,9 @@ export default function VoicePage() {
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
   const [isCallActive, setIsCallActive] = useState(false);
+  
+  // ✅ পরিবর্তন ১: ভয়েসগুলো সেভ করার জন্য নতুন স্টেট
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationRef = useRef<{ role: string; content: string }[]>([]);
@@ -158,13 +160,24 @@ export default function VoicePage() {
     return `${m}:${s}`;
   };
 
+  // ✅ পরিবর্তন ২: ভয়েস লোড করার useEffect আপডেট করা হয়েছে
   useEffect(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
-    const loadVoices = () => { window.speechSynthesis.getVoices(); };
+
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      if (availableVoices.length > 0) {
+        setVoices(availableVoices);
+        // ডিবাগ করার জন্য কনসোলে লগ
+        console.log("Available Voices on this device:", availableVoices.map(v => `${v.name} (${v.lang})`));
+      }
+    };
+
     loadVoices();
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
+
     return () => {
       if (window.speechSynthesis.onvoiceschanged !== undefined) {
         window.speechSynthesis.onvoiceschanged = null;
@@ -316,9 +329,20 @@ export default function VoicePage() {
     window.speechSynthesis.cancel();
     const char = getCharacter();
     const utterance = new SpeechSynthesisUtterance(text);
-    const selectedVoice = getBestVoice(char.id);
-    if (selectedVoice) { utterance.voice = selectedVoice; utterance.lang = selectedVoice.lang; }
-    else { utterance.lang = char.voiceLang || "bn-BD"; }
+    
+    // ✅ পরিবর্তন ৪: getBestVoice-এ voices স্টেটটি পাস করা হচ্ছে
+    const selectedVoice = getBestVoice(char.id, voices);
+    
+    if (selectedVoice) { 
+      utterance.voice = selectedVoice; 
+      utterance.lang = selectedVoice.lang; 
+      // ডিবাগ করার জন্য কনসোলে লগ
+      console.log("Selected Voice for", char.name, ":", selectedVoice.name, selectedVoice.lang);
+    }
+    else { 
+      utterance.lang = char.voiceLang || "bn-BD"; 
+      console.log("No specific voice found, using default lang:", utterance.lang);
+    }
 
     switch (char.id) {
       case "jan": utterance.pitch = 1.55; utterance.rate = 0.92; utterance.volume = 1.0; break;
