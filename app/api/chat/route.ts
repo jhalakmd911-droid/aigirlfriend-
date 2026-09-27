@@ -8,11 +8,10 @@ const characterPrompts: Record<string, string> = {
   ayat: `You are Ayat, the user's creative daughter. Innocent, cheerful, playful. Speak in Bangla and English naturally. Be cute and helpful.`,
 };
 
-// ✅ সঠিক এবং সচল Gemini মডেলের লিস্ট
 const GEMINI_MODELS = [
+  "gemini-2.0-flash",
   "gemini-1.5-flash",
   "gemini-1.5-pro",
-  "gemini-2.0-flash",
 ];
 
 export async function POST(req: Request) {
@@ -38,7 +37,7 @@ export async function POST(req: Request) {
       systemPrompt += `\n\nPREVIOUS MEMORY WITH THIS USER:\n${memoryContext}\n\nUse this memory naturally when relevant.`;
     }
 
-    systemPrompt += `\n\nCRITICAL: Answer in ONE short sentence only. Never write long paragraphs.`;
+    systemPrompt += `\n\nKeep your answers short and natural (max 2 sentences).`;
     systemPrompt += `\n\nIf the user says "সেভ করো", "মনে রাখো", or "remember this", acknowledge warmly with "✅ সেভ করে রাখলাম"`;
 
     const contents = (Array.isArray(messages) ? messages : []).map(
@@ -64,7 +63,7 @@ export async function POST(req: Request) {
             contents,
             generationConfig: {
               temperature: 0.75,
-              maxOutputTokens: 150,
+              maxOutputTokens: 300,
               topP: 0.95,
               topK: 40,
             },
