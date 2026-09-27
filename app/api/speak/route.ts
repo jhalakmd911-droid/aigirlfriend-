@@ -1,44 +1,30 @@
 import { NextResponse } from 'next/server';
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 
 export async function POST(req: Request) {
   try {
     const { text } = await req.json();
-    const apiKey = process.env.ELEVENLABS_API_KEY;
 
-    if (!apiKey) {
-      return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(
+      "bn-IN-NabanitaNeural",
+      OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3
+    );
+
+    const { audioStream } = tts.toStream(text);
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of audioStream) {
+      chunks.push(chunk);
     }
 
-    // "Rachel" ভয়েস আইডি (মেয়ে কণ্ঠ)
-    const voiceId = '21m00Tcm4TlvDq8ikWAM'; 
-    const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+    const audioBuffer = Buffer.concat(chunks);
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'xi-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: 'eleven_multilingual_v2',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return NextResponse.json({ error: `ElevenLabs Error: ${response.status} - ${errorText}` }, { status: response.status });
-    }
-
-    const audioBuffer = await response.arrayBuffer();
     return new NextResponse(audioBuffer, {
       headers: { 'Content-Type': 'audio/mpeg' },
     });
   } catch (error: any) {
-    return NextResponse.json({ error: `Internal server error: ${error.message}` }, { status: 500 });
+    console.error('Edge TTS error:', error);
+    return NextResponse.json({ error: `TTS Error: ${error.message}` }, { status: 500 });
   }
 }
