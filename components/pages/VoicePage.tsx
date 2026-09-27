@@ -71,9 +71,7 @@ export default function VoicePage() {
 
   useEffect(() => {
     if (isCallActive) {
-      timerRef.current = setInterval(() => {
-        setCallDuration((d) => d + 1);
-      }, 1000);
+      timerRef.current = setInterval(() => setCallDuration((d) => d + 1), 1000);
     } else {
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       setCallDuration(0);
@@ -141,10 +139,10 @@ export default function VoicePage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) { 
-      setIsSupported(false); 
-      setError("Voice recognition not supported on this browser. Please use the text box below to test."); 
-      return; 
+    if (!SpeechRecognition) {
+      setIsSupported(false);
+      setError("Voice recognition not supported on this browser. Please use the text box below to test.");
+      return;
     }
 
     const recognition = new SpeechRecognition();
@@ -162,7 +160,6 @@ export default function VoicePage() {
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error("Speech error:", event.error);
       if (event.error === "not-allowed") setError("Microphone permission denied. Please allow mic access.");
       else if (event.error === "no-speech") setError("No speech detected. Please try again.");
       else if (event.error === "aborted") setError("");
@@ -242,9 +239,7 @@ export default function VoicePage() {
         body: JSON.stringify({ text }),
       });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
@@ -257,8 +252,7 @@ export default function VoicePage() {
         audioRef.current = null;
       };
 
-      audio.onerror = (e) => {
-        console.error("Audio playback error:", e);
+      audio.onerror = () => {
         setVoiceState("idle");
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
@@ -266,22 +260,21 @@ export default function VoicePage() {
 
       await audio.play();
     } catch (error: any) {
-      console.error("Failed to fetch or play audio:", error);
       setVoiceState("idle");
       setError(`Voice Error: ${error.message || "Unknown error"}`);
     }
   };
 
   const toggleListening = () => {
-    if (voiceState === "speaking") { 
+    if (voiceState === "speaking") {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-      setVoiceState("idle"); 
-      return; 
+      setVoiceState("idle");
+      return;
     }
     if (voiceState === "listening") { try { recognitionRef.current?.stop(); } catch (e) {} setVoiceState("idle"); return; }
     if (voiceState === "thinking") return;
-    if (!isSupported) { setError("Voice recognition not supported on this browser. Please use the text box below to test."); return; }
-    
+    if (!isSupported) { setError("Voice recognition not supported. Please use the text box below."); return; }
+
     setError(""); setTranscript(""); setAiResponse("");
     setIsCallActive(true);
     try { recognitionRef.current?.start(); } catch (err) { setError("Could not start microphone. Try again."); }
@@ -398,16 +391,16 @@ export default function VoicePage() {
         <div style={{ position: "relative", marginBottom: "22px", zIndex: 1 }}>
           <button
             onClick={toggleListening}
-            disabled={!isSupported || voiceState === "thinking"}
+            disabled={voiceState === "thinking"}
             style={{
               width: "170px", height: "170px", borderRadius: "50%",
               background: voiceState !== "idle" ? "linear-gradient(135deg, #FF2D95, #8B5CF6)" : "rgba(139,92,246,0.15)",
               border: voiceState !== "idle" ? "3px solid rgba(255,45,149,0.6)" : "3px solid rgba(139,92,246,0.35)",
               display: "grid", placeItems: "center", margin: "0 auto",
-              cursor: !isSupported || voiceState === "thinking" ? "not-allowed" : "pointer",
+              cursor: voiceState === "thinking" ? "not-allowed" : "pointer",
               fontSize: "68px", transition: "all 0.3s ease",
               boxShadow: voiceState !== "idle" ? "0 0 70px rgba(255,45,149,0.65)" : "0 12px 35px rgba(139,92,246,0.25)",
-              color: "#fff", opacity: !isSupported ? 0.5 : 1,
+              color: "#fff",
               overflow: "hidden", position: "relative",
             }}
           >
@@ -470,9 +463,9 @@ export default function VoicePage() {
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && textInput.trim()) {
+                setTranscript(textInput.trim());
                 sendToAI(textInput.trim());
                 setTextInput("");
-                setTranscript(textInput.trim());
                 setIsCallActive(true);
               }
             }}
