@@ -9,13 +9,10 @@ const characterPrompts: Record<string, string> = {
 };
 
 const GEMINI_MODELS = [
-  "gemini-3.5-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-3.6-flash",
-  "gemini-3.7-flash",
-  "gemini-3.1-flash-lite",
   "gemini-2.0-flash",
   "gemini-1.5-flash",
+  "gemini-1.5-pro",
+  "gemini-2.5-flash",
 ];
 
 export async function POST(req: Request) {
@@ -41,8 +38,7 @@ export async function POST(req: Request) {
       systemPrompt += `\n\nPREVIOUS MEMORY WITH THIS USER:\n${memoryContext}\n\nUse this memory naturally when relevant.`;
     }
 
-    // ✅ দ্রুত ভয়েস জেনারেশনের জন্য ছোট উত্তর দেওয়ার নির্দেশ
-    systemPrompt += `\n\nCRITICAL: Answer in ONE short sentence only (max 15 words). Never write paragraphs.`;
+    systemPrompt += `\n\nCRITICAL: Answer in ONE short sentence only. Never write long paragraphs.`;
     systemPrompt += `\n\nIf the user says "সেভ করো", "মনে রাখো", or "remember this", acknowledge warmly with "✅ সেভ করে রাখলাম"`;
 
     const contents = (Array.isArray(messages) ? messages : []).map(
@@ -68,7 +64,7 @@ export async function POST(req: Request) {
             contents,
             generationConfig: {
               temperature: 0.75,
-              maxOutputTokens: 50, // ✅ দ্রুত রেসপন্সের জন্য ৫০ টোকেনে সীমাবদ্ধ
+              maxOutputTokens: 150,
               topP: 0.95,
               topK: 40,
             },
