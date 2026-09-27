@@ -3,37 +3,18 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const { text } = await req.json();
-    const apiKey = process.env.ELEVENLABS_API_KEY;
 
-    if (!apiKey) {
-      return NextResponse.json({ error: 'API key not configured in Vercel' }, { status: 500 });
-    }
+    // StreamElements এর ফ্রি TTS (কোনো API Key লাগে না)
+    // 'Aditi' হলো AWS Polly-র বাংলা (ভারত) মহিলা ভয়েস
+    const voice = 'Aditi'; 
+    const url = `https://api.streamelements.com/kappa/v2/speech?voice=${voice}&text=${encodeURIComponent(text)}`;
 
-    // "Rachel" নামের একটি জনপ্রিয় মহিলা ভয়েস আইডি
-    const voiceId = '21m00Tcm4TlvDq8ikWAM'; 
-    const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'xi-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: 'eleven_multilingual_v2',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-        },
-      }),
-    });
+    const response = await fetch(url);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('ElevenLabs detailed error:', errorText);
-      // ✅ আসল এররটি ফ্রন্টএন্ডে পাঠানো হচ্ছে
-      return NextResponse.json({ error: `ElevenLabs Error: ${response.status} - ${errorText}` }, { status: response.status });
+      console.error('StreamElements TTS error:', errorText);
+      return NextResponse.json({ error: `TTS Error: ${response.status}` }, { status: response.status });
     }
 
     const audioBuffer = await response.arrayBuffer();
