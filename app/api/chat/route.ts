@@ -8,7 +8,7 @@ const characterPrompts: Record<string, string> = {
   ayat: `You are Ayat, the user's creative daughter. Innocent, cheerful, playful. Speak in Bangla and English naturally. Be cute and helpful.`,
 };
 
-// ✅ সঠিক এবং সচল Gemini মডেলের লিস্ট (এগুলো কাজ করে)
+// ✅ সঠিক এবং সচল Gemini মডেলের লিস্ট
 const GEMINI_MODELS = [
   "gemini-1.5-flash",
   "gemini-1.5-pro",
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
             contents,
             generationConfig: {
               temperature: 0.75,
-              maxOutputTokens: 200, // ✅ ২০০ টোকেন (খুব কম বা খুব বেশি নয়)
+              maxOutputTokens: 800, // ✅ ৮০০ টোকেন, যা আগে কাজ করেছিল
               topP: 0.95,
               topK: 40,
             },
