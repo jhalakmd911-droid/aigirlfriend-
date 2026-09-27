@@ -8,11 +8,11 @@ const characterPrompts: Record<string, string> = {
   ayat: `You are Ayat, the user's creative daughter. Innocent, cheerful, playful. Speak in Bangla and English naturally. Be cute and helpful.`,
 };
 
+// ✅ সঠিক এবং সচল Gemini মডেলের লিস্ট
 const GEMINI_MODELS = [
-  "gemini-2.0-flash",
   "gemini-1.5-flash",
   "gemini-1.5-pro",
-  "gemini-2.5-flash",
+  "gemini-2.0-flash",
 ];
 
 export async function POST(req: Request) {
