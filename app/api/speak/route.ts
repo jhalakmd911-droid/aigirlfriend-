@@ -9,7 +9,12 @@ export async function POST(req: Request) {
     const voice = 'Aditi'; 
     const url = `https://api.streamelements.com/kappa/v2/speech?voice=${voice}&text=${encodeURIComponent(text)}`;
 
-    const response = await fetch(url);
+    // ✅ ফিক্স: Cloudflare ব্লক এড়ানোর জন্য একটি ব্রাউজার User-Agent যোগ করা হলো
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
