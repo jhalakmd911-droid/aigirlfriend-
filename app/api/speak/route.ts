@@ -5,9 +5,10 @@ export async function POST(req: Request) {
   try {
     const { text } = await req.json();
 
+    // ✅ বাংলাদেশি মেয়ে কণ্ঠ (Tanishaa)
     const tts = new MsEdgeTTS();
     await tts.setMetadata(
-      "bn-IN-NabanitaNeural",
+      "bn-BD-TanishaaNeural",
       OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3
     );
 
@@ -21,7 +22,9 @@ export async function POST(req: Request) {
     const audioBuffer = Buffer.concat(chunks);
 
     return new NextResponse(audioBuffer, {
-      headers: { 'Content-Type': 'audio/mpeg' },
+      headers: {
+        'Content-Type': 'audio/mpeg',
+      },
     });
   } catch (error: any) {
     console.error('Edge TTS error:', error);
