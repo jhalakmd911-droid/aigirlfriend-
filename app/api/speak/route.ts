@@ -4,7 +4,7 @@ export async function POST(req: Request) {
   try {
     const { text } = await req.json();
 
-    // Google Translate TTS - Vercel ফ্রি সার্ভারে দ্রুত এবং নির্ভরযোগ্য
+    // Google Translate TTS - এই সিস্টেমেই আগে মেয়ে কণ্ঠে কাজ করেছিল
     const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=bn&client=tw-ob`;
 
     const response = await fetch(url, {
