@@ -8,6 +8,13 @@ const characterPrompts: Record<string, string> = {
   ayat: `You are Ayat, the user's creative daughter. Innocent, cheerful, playful. Speak in Bangla and English naturally. Be cute and helpful.`,
 };
 
+// ✅ Groq-এর সঠিক এবং বর্তমান মডেলের লিস্ট (একটি বন্ধ হলে অন্যটি কাজ করবে)
+const GROQ_MODELS = [
+  "llama-3.3-70b-versatile",   // সবচেয়ে নতুন এবং সেরা
+  "llama-3.1-8b-instant",      // দ্রুত এবং হালকা
+  "gemma2-9b-it",              // বিকল্প মডেল
+];
+
 export async function POST(req: Request) {
   try {
     const { messages, character, customName, memoryContext } = await req.json();
@@ -31,10 +38,8 @@ export async function POST(req: Request) {
       systemPrompt += `\n\nPREVIOUS MEMORY WITH THIS USER:\n${memoryContext}\n\nUse this memory naturally when relevant.`;
     }
 
-    // ✅ দ্রুত ভয়েস জেনারেশনের জন্য ছোট উত্তর
     systemPrompt += `\n\nKeep your answers short and natural (max 2 sentences).`;
 
-    // Groq OpenAI-compatible ফরম্যাটে মেসেজ সাজানো
     const groqMessages = [
       { role: "system", content: systemPrompt },
       ...(Array.isArray(messages) ? messages : []).map((msg: any) => ({
@@ -43,32 +48,51 @@ export async function POST(req: Request) {
       })),
     ];
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.1-70b-versatile", // ✅ Groq-এর সেরা ফ্রি মডেল (বাংলা সাপোর্ট করে)
-        messages: groqMessages,
-        temperature: 0.75,
-        max_tokens: 300,
-        stream: true,
-      }),
-    });
+    let response: Response | null = null;
+    let workingModel = "";
+    const errors: string[] = [];
 
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "");
+    // ✅ এক এক করে প্রতিটি মডেল চেষ্টা করা (যাতে একটি বন্ধ হলেও অ্যাপ চলু থাকে)
+    for (const model of GROQ_MODELS) {
+      try {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: groqMessages,
+            temperature: 0.75,
+            max_tokens: 300,
+            stream: true,
+          }),
+        });
+
+        if (res.ok && res.body) {
+          response = res;
+          workingModel = model;
+          break;
+        } else {
+          const errText = await res.text().catch(() => "");
+          errors.push(`${model}: ${res.status} ${errText.slice(0, 150)}`);
+        }
+      } catch (err: any) {
+        errors.push(`${model}: ${err.message}`);
+      }
+    }
+
+    if (!response || !response.body) {
       return NextResponse.json(
-        { error: `Groq Error: ${response.status} - ${errText}` },
-        { status: response.status }
+        { error: `Groq Error (all models failed): ${errors.join(" | ")}` },
+        { status: 503 }
       );
     }
 
     const stream = new ReadableStream({
       async start(controller) {
-        const reader = response.body!.getReader();
+        const reader = response!.body!.getReader();
         const decoder = new TextDecoder();
         const encoder = new TextEncoder();
         let buffer = "";
@@ -112,6 +136,7 @@ export async function POST(req: Request) {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
+        "X-Working-Model": workingModel,
       },
     });
   } catch (error: any) {
