@@ -59,6 +59,8 @@ export default function VoicePage() {
   const [callDuration, setCallDuration] = useState(0);
   const [isCallActive, setIsCallActive] = useState(false);
   const [textInput, setTextInput] = useState("");
+  // ✅ নতুন: অটো-লিসেন মোড (একটানা কথা বলার জন্য)
+  const [autoListen, setAutoListen] = useState(true);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationRef = useRef<{ role: string; content: string }[]>([]);
@@ -66,8 +68,12 @@ export default function VoicePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isCallActiveRef = useRef<boolean>(false);
+  const autoListenRef = useRef<boolean>(true);
 
   useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
+  useEffect(() => { isCallActiveRef.current = isCallActive; }, [isCallActive]);
+  useEffect(() => { autoListenRef.current = autoListen; }, [autoListen]);
 
   useEffect(() => {
     if (isCallActive) {
@@ -161,14 +167,31 @@ export default function VoicePage() {
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       if (event.error === "not-allowed") setError("Microphone permission denied. Please allow mic access.");
-      else if (event.error === "no-speech") setError("No speech detected. Please try again.");
+      else if (event.error === "no-speech") {
+        // ✅ কোন শব্দ না পেলে অটো-লিসেন চালু থাকলে আবার শোনা শুরু করবে
+        if (isCallActiveRef.current && autoListenRef.current) {
+          setTimeout(() => {
+            try { recognitionRef.current?.start(); } catch (e) {}
+          }, 500);
+        } else {
+          setVoiceState("idle");
+        }
+      }
       else if (event.error === "aborted") setError("");
       else setError("Voice error: " + event.error);
-      setVoiceState("idle");
     };
 
     recognition.onend = () => {
-      if (voiceStateRef.current !== "thinking" && voiceStateRef.current !== "speaking") setVoiceState("idle");
+      // ✅ যদি এখনো কল চলছে এবং AI কথা বলছে না, তবে আবার শোনা শুরু করবে
+      if (voiceStateRef.current !== "thinking" && voiceStateRef.current !== "speaking") {
+        if (isCallActiveRef.current && autoListenRef.current) {
+          setTimeout(() => {
+            try { recognitionRef.current?.start(); } catch (e) {}
+          }, 500);
+        } else {
+          setVoiceState("idle");
+        }
+      }
     };
 
     recognitionRef.current = recognition;
@@ -247,15 +270,24 @@ export default function VoicePage() {
       audioRef.current = audio;
 
       audio.onended = () => {
-        setVoiceState("idle");
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
+
+        // ✅ AI কথা বলা শেষ হলে অটো-লিসেন চালু থাকলে আবার মাইক্রোফোন চালু করবে
+        if (isCallActiveRef.current && autoListenRef.current && !isMuted && isSpeakerOn) {
+          setVoiceState("listening");
+          setTimeout(() => {
+            try { recognitionRef.current?.start(); } catch (e) { setVoiceState("idle"); }
+          }, 500);
+        } else {
+          setVoiceState("idle");
+        }
       };
 
       audio.onerror = () => {
-        setVoiceState("idle");
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
+        setVoiceState("idle");
       };
 
       await audio.play();
@@ -265,29 +297,45 @@ export default function VoicePage() {
     }
   };
 
+  // ✅ মাইকে চাপ দিলে: শুরু / থামানো / আবার চালু
   const toggleListening = () => {
     if (voiceState === "speaking") {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       setVoiceState("idle");
       return;
     }
-    if (voiceState === "listening") { try { recognitionRef.current?.stop(); } catch (e) {} setVoiceState("idle"); return; }
+    if (voiceState === "listening") {
+      try { recognitionRef.current?.stop(); } catch (e) {}
+      setIsCallActive(false);
+      setVoiceState("idle");
+      return;
+    }
     if (voiceState === "thinking") return;
-    if (!isSupported) { setError("Voice recognition not supported. Please use the text box below."); return; }
 
     setError(""); setTranscript(""); setAiResponse("");
     setIsCallActive(true);
     try { recognitionRef.current?.start(); } catch (err) { setError("Could not start microphone. Try again."); }
   };
 
+  // ✅ অটো-লিসেন মোড অন/অফ
+  const toggleAutoListen = () => {
+    setAutoListen((prev) => {
+      const newVal = !prev;
+      if (newVal && isCallActive && voiceState !== "speaking" && voiceState !== "thinking") {
+        try { recognitionRef.current?.start(); } catch (e) {}
+      }
+      return newVal;
+    });
+  };
+
   const endCall = () => {
     if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     try { recognitionRef.current?.abort(); } catch (e) {}
+    setIsCallActive(false);
     setVoiceState("idle");
     setTranscript("");
     setAiResponse("");
-    setIsCallActive(false);
   };
 
   const switchCharacter = (id: string) => {
@@ -297,10 +345,10 @@ export default function VoicePage() {
     conversationRef.current = [];
     setSelectedCharacter(id);
     setShowCharacterMenu(false);
+    setIsCallActive(false);
     setVoiceState("idle");
     setTranscript("");
     setAiResponse("");
-    setIsCallActive(false);
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -384,6 +432,20 @@ export default function VoicePage() {
         )}
       </div>
 
+      {/* ✅ অটো-লিসেন টগল (একটানা কথা বলার জন্য) */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", marginBottom: "16px", borderRadius: "12px", background: autoListen ? "linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.05))" : "rgba(139,92,246,0.1)", border: autoListen ? "1px solid rgba(34,197,94,0.5)" : "1px solid rgba(139,92,246,0.3)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span style={{ fontSize: "18px" }}>{autoListen ? "🔁" : "⏸️"}</span>
+          <div>
+            <p style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>Auto-Listen {autoListen ? "ON" : "OFF"}</p>
+            <p style={{ fontSize: "11px", color: "var(--muted)" }}>{autoListen ? "একটানা কথা বলুন, বারবার চাপ দিতে হবে না" : "প্রতিবার মাইকে চাপ দিয়ে কথা বলুন"}</p>
+          </div>
+        </div>
+        <button onClick={toggleAutoListen} style={{ width: "48px", height: "28px", borderRadius: "14px", border: "none", background: autoListen ? "linear-gradient(135deg, #22c55e, #16a34a)" : "rgba(139,92,246,0.4)", position: "relative", cursor: "pointer", transition: "all 0.3s" }}>
+          <span style={{ position: "absolute", top: "3px", left: autoListen ? "23px" : "3px", width: "22px", height: "22px", borderRadius: "50%", background: "#fff", transition: "all 0.3s" }} />
+        </button>
+      </div>
+
       <section className="card" style={{ padding: "28px 18px", textAlign: "center", position: "relative", overflow: "hidden", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <div style={{ position: "absolute", width: "260px", height: "260px", borderRadius: "50%", background: "radial-gradient(circle, rgba(255,45,149,0.20), transparent 70%)", top: "-100px", left: "-80px" }} />
         <div style={{ position: "absolute", width: "260px", height: "260px", borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,0.20), transparent 70%)", bottom: "-120px", right: "-80px" }} />
@@ -428,13 +490,13 @@ export default function VoicePage() {
 
         <div style={{ position: "relative", zIndex: 1 }}>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#fff", marginBottom: "6px" }}>
-            {voiceState === "idle" && "Tap to speak"}
+            {voiceState === "idle" && (isCallActive ? "Waiting..." : "Tap to speak")}
             {voiceState === "listening" && "Listening..."}
             {voiceState === "thinking" && "Thinking..."}
             {voiceState === "speaking" && "Speaking..."}
           </h2>
           <p style={{ fontSize: "13px", color: "var(--muted)", marginBottom: "4px" }}>
-            {voiceState === "idle" && "Tap the microphone and speak"}
+            {voiceState === "idle" && (isCallActive ? "Auto-listen active" : "Tap the microphone and speak")}
             {voiceState === "listening" && "I'm listening to you..."}
             {voiceState === "thinking" && "Let me think..."}
             {voiceState === "speaking" && "Tap again to stop"}
