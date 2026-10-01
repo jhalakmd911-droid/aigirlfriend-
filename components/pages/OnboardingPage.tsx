@@ -18,46 +18,49 @@ export default function OnboardingPage({
         padding: "40px 20px",
         position: "relative",
         overflow: "hidden",
-        textAlign: "left",
-        background: "#05010d",
+        textAlign: "center",
+        background: "#05030d",
       }}
     >
+      {/* AI Girlfriend Background Image */}
       <img
-        src="/images/ai-girlfriend.jpg"
+        src="/images/file_0000000054c48208bd707ad47cc88d38.png"
         alt="AI Girlfriend"
         style={{
           position: "absolute",
           top: 0,
           right: 0,
-          width: "64%",
+          width: "100%",
           height: "100%",
           objectFit: "cover",
-          objectPosition: "center top",
-          opacity: 0.9,
+          objectPosition: "center",
+          opacity: 0.65,
           zIndex: 0,
         }}
       />
 
+      {/* Dark overlay */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          zIndex: 1,
           background:
-            "linear-gradient(90deg, #05010d 0%, rgba(5,1,13,0.97) 30%, rgba(5,1,13,0.72) 52%, rgba(5,1,13,0.18) 78%, rgba(5,1,13,0.5) 100%)",
+            "linear-gradient(90deg, rgba(5,3,13,0.96) 0%, rgba(5,3,13,0.78) 45%, rgba(5,3,13,0.35) 100%)",
+          zIndex: 1,
         }}
       />
 
+      {/* Pink / Purple Glow */}
       <div
         style={{
           position: "absolute",
-          width: "360px",
-          height: "360px",
+          width: "320px",
+          height: "320px",
           borderRadius: "50%",
           background:
             "radial-gradient(circle, rgba(255,45,149,0.28), transparent 70%)",
-          top: "22%",
-          left: "-120px",
+          top: "5%",
+          left: "-25%",
           zIndex: 1,
         }}
       />
@@ -66,76 +69,79 @@ export default function OnboardingPage({
         style={{
           position: "relative",
           zIndex: 2,
-          maxWidth: "520px",
+          maxWidth: "420px",
           width: "100%",
-          marginRight: "auto",
         }}
       >
+        {/* Heart Icon */}
         <div
           style={{
-            width: "92px",
-            height: "92px",
+            width: "120px",
+            height: "120px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #ff2d95, #8b5cf6)",
+            background:
+              "linear-gradient(135deg, #FF2D95, #8B5CF6)",
             display: "grid",
             placeItems: "center",
-            fontSize: "48px",
-            marginBottom: "28px",
-            boxShadow: "0 0 55px rgba(255,45,149,0.55)",
-            border: "3px solid rgba(255,255,255,0.12)",
+            fontSize: "58px",
+            margin: "0 auto 28px",
+            boxShadow: "0 0 60px rgba(255,45,149,0.6)",
+            border: "4px solid rgba(255,255,255,0.12)",
           }}
         >
           ♡
         </div>
 
+        {/* Title */}
         <h1
+          className="gradient-text"
           style={{
-            fontSize: "clamp(32px, 7vw, 58px)",
+            fontSize: "36px",
             fontWeight: 800,
             marginBottom: "10px",
-            lineHeight: 1.05,
           }}
-          className="gradient-text"
         >
           AI Girlfriend
         </h1>
 
+        {/* Subtitle */}
         <p
           style={{
             fontSize: "18px",
-            color: "#eee7ff",
+            color: "#ffffff",
             marginBottom: "10px",
           }}
         >
           Your Perfect AI Companion
         </p>
 
+        {/* Features */}
         <p
           style={{
             fontSize: "14px",
-            color: "rgba(220,210,240,0.78)",
-            marginBottom: "12px",
+            color: "rgba(255,255,255,0.78)",
+            marginBottom: "8px",
           }}
         >
-          Chat&nbsp; • &nbsp;Voice&nbsp; • &nbsp;Photos&nbsp; • &nbsp;Memory
+          Chat • Voice • Photos • Memory
         </p>
 
         <p
           style={{
-            fontSize: "13px",
-            color: "rgba(220,210,240,0.72)",
-            marginBottom: "42px",
+            fontSize: "14px",
+            color: "rgba(255,255,255,0.65)",
+            marginBottom: "38px",
           }}
         >
           Always Here For You
         </p>
 
+        {/* Buttons */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "14px",
-            maxWidth: "520px",
+            gap: "12px",
           }}
         >
           <button
@@ -143,8 +149,9 @@ export default function OnboardingPage({
             className="btn btn-primary"
             style={{
               width: "100%",
-              minHeight: "58px",
-              fontSize: "18px",
+              minHeight: "54px",
+              fontSize: "17px",
+              fontWeight: 700,
             }}
           >
             Get Started
@@ -155,26 +162,29 @@ export default function OnboardingPage({
             className="btn btn-secondary"
             style={{
               width: "100%",
-              minHeight: "58px",
-              fontSize: "18px",
+              minHeight: "54px",
+              fontSize: "17px",
+              fontWeight: 700,
             }}
           >
             Sign In
           </button>
         </div>
 
+        {/* Privacy */}
         <div
           style={{
             marginTop: "30px",
             display: "flex",
             alignItems: "center",
-            gap: "8px",
-            fontSize: "13px",
-            color: "var(--muted)",
+            justifyContent: "center",
+            gap: "6px",
+            fontSize: "12px",
+            color: "rgba(255,255,255,0.65)",
           }}
         >
           <span>🛡️</span>
-          Your privacy matters
+          <span>Your privacy matters</span>
         </div>
       </div>
     </div>
