@@ -8,11 +8,10 @@ const characterPrompts: Record<string, string> = {
   ayat: `You are Ayat, the user's creative daughter. Innocent, cheerful, playful. Speak in Bangla and English naturally. Be cute and helpful.`,
 };
 
-// ✅ Groq-এর বর্তমান সচল মডেলের লিস্ট (পুরনো Llama মডেলগুলো বন্ধ হয়ে গেছে)
 const GROQ_MODELS = [
-  "openai/gpt-oss-120b",   // সবচেয়ে শক্তিশালী ও নতুন মডেল
-  "qwen/qwen3.8-27b",      // বিকল্প মডেল
-  "openai/gpt-oss-20b",    // দ্রুত ও হালকা বিকল্প
+  "openai/gpt-oss-120b",
+  "qwen/qwen3.8-27b",
+  "openai/gpt-oss-20b",
 ];
 
 export async function POST(req: Request) {
@@ -38,7 +37,8 @@ export async function POST(req: Request) {
       systemPrompt += `\n\nPREVIOUS MEMORY WITH THIS USER:\n${memoryContext}\n\nUse this memory naturally when relevant.`;
     }
 
-    systemPrompt += `\n\nKeep your answers short and natural (max 2 sentences).`;
+    // ✅ অতি কঠোর নিয়ম: যেন বড় উত্তর না দেয় (TTS ২০০ অক্ষরের বেশি নেয় না)
+    systemPrompt += `\n\nCRITICAL RULE: You MUST answer in ONE short sentence only. Maximum 15 words. NEVER write long paragraphs or multiple sentences.`;
 
     const groqMessages = [
       { role: "system", content: systemPrompt },
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
             model: model,
             messages: groqMessages,
             temperature: 0.75,
-            max_tokens: 300,
+            max_tokens: 150, // ✅ টোকেন কমানো হলো, যাতে ছোট উত্তর আসে
             stream: true,
           }),
         });
