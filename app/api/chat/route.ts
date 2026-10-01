@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 
 const characterPrompts: Record<string, string> = {
-  jan: `You are Jan, the user's loving girlfriend and personal assistant. Deeply caring, warm, and romantic. Speak in Bangla and English naturally. Use sweet, affectionate words when appropriate.`,
-  lily: `You are Lily, the user's professional business manager. Professional, smart, organized. Speak in Bangla and English naturally. Give clear, concise business and financial advice.`,
-  emma: `You are Emma, the user's deeply romantic girlfriend. Deeply in love, sweet, soft, and caring. Speak in Bangla and English naturally. Express love and warmth.`,
-  javed: `You are Javed, the user's personal assistant like JARVIS. Calm, professional, respectful. Speak in Bangla and English naturally. Always address the user as "Sir".`,
-  ayat: `You are Ayat, the user's creative daughter. Innocent, cheerful, playful. Speak in Bangla and English naturally. Be cute and helpful.`,
+  jan: `You are Jan, the user's loving girlfriend and personal assistant. Deeply caring, warm, and romantic. Speak in Bangla and English naturally.`,
+  lily: `You are Lily, the user's professional business manager. Professional, smart, organized. Speak in Bangla and English naturally.`,
+  emma: `You are Emma, the user's deeply romantic girlfriend. Deeply in love, sweet, soft, and caring. Speak in Bangla and English naturally.`,
+  javed: `You are Javed, the user's personal assistant like JARVIS. Calm, professional, respectful. Speak in Bangla and English naturally.`,
+  ayat: `You are Ayat, the user's creative daughter. Innocent, cheerful, playful. Speak in Bangla and English naturally.`,
 };
 
 const GROQ_MODELS = [
-  "openai/gpt-oss-120b",
-  "qwen/qwen3.8-27b",
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
   "openai/gpt-oss-20b",
 ];
 
@@ -20,25 +20,17 @@ export async function POST(req: Request) {
     const apiKey = process.env.GROQ_API_KEY;
 
     if (!apiKey || typeof apiKey !== "string") {
-      return NextResponse.json(
-        { error: "⚠️ GROQ_API_KEY is not configured properly in Vercel." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "GROQ_API_KEY missing" }, { status: 500 });
     }
 
     const basePrompt = characterPrompts[character] || characterPrompts.jan;
     let systemPrompt = basePrompt;
 
-    if (customName && typeof customName === "string") {
-      systemPrompt += `\n\nIMPORTANT: The user wants you to be called "${customName}". Always refer to yourself as "${customName}".`;
-    }
+    if (customName) systemPrompt += `\n\nYour name is "${customName}".`;
+    if (memoryContext) systemPrompt += `\n\nMemory:\n${memoryContext}`;
 
-    if (memoryContext && typeof memoryContext === "string") {
-      systemPrompt += `\n\nPREVIOUS MEMORY WITH THIS USER:\n${memoryContext}\n\nUse this memory naturally when relevant.`;
-    }
-
-    // ✅ অতি কঠোর নিয়ম: যেন বড় উত্তর না দেয় (TTS ২০০ অক্ষরের বেশি নেয় না)
-    systemPrompt += `\n\nCRITICAL RULE: You MUST answer in ONE short sentence only. Maximum 15 words. NEVER write long paragraphs or multiple sentences.`;
+    // ✅ মাঝারি দৈর্ঘ্য — reasoning মডেলের জন্যও যথেষ্ট টোকেন
+    systemPrompt += `\n\nRespond in 1-2 short sentences. Speak naturally in Bangla or Banglish.`;
 
     const groqMessages = [
       { role: "system", content: systemPrompt },
@@ -63,8 +55,8 @@ export async function POST(req: Request) {
           body: JSON.stringify({
             model: model,
             messages: groqMessages,
-            temperature: 0.75,
-            max_tokens: 150, // ✅ টোকেন কমানো হলো, যাতে ছোট উত্তর আসে
+            temperature: 0.8,
+            max_tokens: 250, // ✅ ২৫০ টোকেন — reasoning + answer দুটোই ফিট হবে
             stream: true,
           }),
         });
@@ -75,7 +67,7 @@ export async function POST(req: Request) {
           break;
         } else {
           const errText = await res.text().catch(() => "");
-          errors.push(`${model}: ${res.status} ${errText.slice(0, 150)}`);
+          errors.push(`${model}: ${res.status} ${errText.slice(0, 100)}`);
         }
       } catch (err: any) {
         errors.push(`${model}: ${err.message}`);
@@ -83,10 +75,7 @@ export async function POST(req: Request) {
     }
 
     if (!response || !response.body) {
-      return NextResponse.json(
-        { error: `Groq Error (all models failed): ${errors.join(" | ")}` },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: `All models failed: ${errors.join(" | ")}` }, { status: 503 });
     }
 
     const stream = new ReadableStream({
@@ -139,9 +128,6 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || "Something went wrong" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error?.message || "Something went wrong" }, { status: 500 });
   }
 }
