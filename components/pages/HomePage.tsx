@@ -18,10 +18,7 @@ const FEATURES = [
   { id: "export", icon: "📤", title: "Export / Import", subtitle: "Backup & restore data", color: "#EF4444" },
 ];
 
-export default function HomePage({
-  onNavigate,
-  onOpenProfile,
-}: HomePageProps) {
+export default function HomePage({ onNavigate, onOpenProfile }: HomePageProps) {
   const [userName, setUserName] = useState("");
   const [greeting, setGreeting] = useState("Hello");
 
@@ -50,211 +47,225 @@ export default function HomePage({
   };
 
   return (
-    <div
-      style={{
-        padding: "8px 0 24px",
-        maxWidth: "760px",
-        margin: "0 auto",
-      }}
-    >
-      {/* Greeting */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: "20px",
-        }}
-      >
-        <div>
-          <p
-            style={{
-              margin: "0 0 5px",
-              fontSize: "12px",
-              color: "var(--muted)",
-              letterSpacing: "0.4px",
-            }}
-          >
-            Welcome back
-          </p>
-
-          <h1
-            className="gradient-text"
-            style={{
-              margin: 0,
-              fontSize: "27px",
-              lineHeight: 1.15,
-              fontWeight: 800,
-              letterSpacing: "-0.7px",
-            }}
-          >
-            {greeting}
-            {userName ? `, ${userName}` : ""}!
-          </h1>
-        </div>
-
-        <div
+    <div style={{ padding: "10px 0" }}>
+      <div style={{ marginBottom: "24px" }}>
+        <h1
+          className="gradient-text"
           style={{
-            width: "42px",
-            height: "42px",
-            borderRadius: "50%",
-            display: "grid",
-            placeItems: "center",
-            background:
-              "linear-gradient(135deg, rgba(255,45,149,0.25), rgba(139,92,246,0.3))",
-            border: "1px solid rgba(255,255,255,0.12)",
-            boxShadow: "0 8px 25px rgba(139,92,246,0.18)",
-            fontSize: "19px",
+            fontSize: "28px",
+            fontWeight: 800,
+            marginBottom: "6px",
+            letterSpacing: "-0.6px",
           }}
         >
-          ❤️
-        </div>
+          {greeting}{userName ? `, ${userName}` : ""}! 👋
+        </h1>
+
+        <p style={{ fontSize: "14px", color: "var(--muted)" }}>
+          How are you feeling today?
+        </p>
       </div>
 
-      <p
-        style={{
-          margin: "-9px 0 20px",
-          fontSize: "13px",
-          color: "var(--muted)",
-        }}
-      >
-        How are you feeling today?
-      </p>
-
-      {/* AI Companion Hero */}
       <section
         className="card"
         style={{
+          padding: "0",
+          marginBottom: "24px",
           position: "relative",
           overflow: "hidden",
-          padding: 0,
-          minHeight: "285px",
-          marginBottom: "24px",
-          borderRadius: "24px",
-          border: "1px solid rgba(255,255,255,0.10)",
-          background:
-            "linear-gradient(145deg, rgba(255,45,149,0.18), rgba(139,92,246,0.16) 48%, rgba(15,15,25,0.95) 100%)",
-          boxShadow:
-            "0 18px 50px rgba(0,0,0,0.28), 0 0 45px rgba(255,45,149,0.08)",
+          minHeight: "200px",
         }}
       >
         <div
           style={{
             position: "absolute",
-            width: "240px",
-            height: "240px",
-            borderRadius: "50%",
-            right: "-85px",
-            top: "-80px",
+            inset: 0,
             background:
-              "radial-gradient(circle, rgba(255,45,149,0.30), transparent 68%)",
-            pointerEvents: "none",
+              "linear-gradient(135deg, rgba(255,45,149,0.35) 0%, rgba(139,92,246,0.35) 100%)",
           }}
         />
 
         <div
           style={{
             position: "absolute",
-            width: "200px",
-            height: "200px",
+            width: "260px",
+            height: "260px",
             borderRadius: "50%",
-            left: "-100px",
-            bottom: "-120px",
             background:
-              "radial-gradient(circle, rgba(139,92,246,0.24), transparent 70%)",
-            pointerEvents: "none",
+              "radial-gradient(circle, rgba(255,45,149,0.4), transparent 70%)",
+            top: "-120px",
+            right: "-80px",
           }}
         />
 
         <div
           style={{
             position: "relative",
-            zIndex: 1,
-            padding: "22px 20px",
-            minHeight: "285px",
+            padding: "24px 22px",
             display: "flex",
             flexDirection: "column",
-            justifyContent: "space-between",
+            justifyContent: "center",
+            minHeight: "200px",
           }}
         >
-          {/* Companion Visual */}
           <div
             style={{
-              display: "flex",
-              justifyContent: "center",
-              marginBottom: "10px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              background: "rgba(0,0,0,0.35)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: "20px",
+              padding: "4px 12px",
+              fontSize: "11px",
+              fontWeight: 600,
+              color: "#fff",
+              marginBottom: "12px",
+              alignSelf: "flex-start",
+              backdropFilter: "blur(10px)",
             }}
           >
-            <div
-              style={{
-                width: "94px",
-                height: "94px",
-                borderRadius: "50%",
-                display: "grid",
-                placeItems: "center",
-                position: "relative",
-                background:
-                  "linear-gradient(145deg, rgba(255,45,149,0.9), rgba(139,92,246,0.95))",
-                boxShadow:
-                  "0 0 0 7px rgba(255,255,255,0.05), 0 12px 40px rgba(255,45,149,0.30)",
-                fontSize: "43px",
-              }}
-            >
-              💗
-
-              <span
-                style={{
-                  position: "absolute",
-                  right: "2px",
-                  bottom: "5px",
-                  width: "16px",
-                  height: "16px",
-                  borderRadius: "50%",
-                  background: "#22c55e",
-                  border: "3px solid #15131f",
-                  boxShadow: "0 0 12px rgba(34,197,94,0.7)",
-                }}
-              />
-            </div>
+            ❤️ Your AI Companion
           </div>
 
-          <div style={{ textAlign: "center" }}>
-            <div
+          <h2
+            style={{
+              fontSize: "22px",
+              fontWeight: 800,
+              color: "#fff",
+              marginBottom: "8px",
+              lineHeight: 1.2,
+              maxWidth: "280px",
+            }}
+          >
+            Always here for you
+          </h2>
+
+          <p
+            style={{
+              fontSize: "13px",
+              color: "rgba(255,255,255,0.85)",
+              lineHeight: 1.5,
+              marginBottom: "18px",
+              maxWidth: "280px",
+            }}
+          >
+            Your perfect AI companion is ready to chat, listen, and be by your side.
+          </p>
+
+          <button
+            onClick={() => onNavigate("chat")}
+            className="btn btn-primary"
+            style={{
+              alignSelf: "flex-start",
+              padding: "12px 26px",
+              fontSize: "14px",
+            }}
+          >
+            💬 Start Chatting
+          </button>
+        </div>
+      </section>
+
+      <div style={{ marginBottom: "12px" }}>
+        <h3
+          style={{
+            fontSize: "16px",
+            fontWeight: 700,
+            color: "#fff",
+            marginBottom: "12px",
+          }}
+        >
+          ✨ All Features
+        </h3>
+
+        <p
+          style={{
+            fontSize: "12px",
+            color: "var(--muted)",
+            marginBottom: "14px",
+          }}
+        >
+          Everything you need in one place
+        </p>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: "10px",
+          }}
+        >
+          {FEATURES.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => handleFeatureClick(f.id)}
+              className="card"
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "5px 11px",
-                borderRadius: "999px",
-                background: "rgba(0,0,0,0.28)",
-                border: "1px solid rgba(255,255,255,0.10)",
-                color: "rgba(255,255,255,0.88)",
-                fontSize: "10px",
-                fontWeight: 700,
-                letterSpacing: "0.3px",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
+                padding: "14px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                gap: "8px",
+                textAlign: "left",
+                cursor: "pointer",
+                background: "var(--card)",
+                border: "1px solid var(--border)",
               }}
             >
-              <span>●</span>
-              AI COMPANION
-            </div>
+              <div
+                style={{
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "14px",
+                  background: `linear-gradient(135deg, ${f.color}, ${f.color}88)`,
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: "20px",
+                  boxShadow: `0 6px 18px ${f.color}55`,
+                }}
+              >
+                {f.icon}
+              </div>
 
-            <h2
-              style={{
-                margin: "11px 0 5px",
-                fontSize: "23px",
-                lineHeight: 1.2,
-                fontWeight: 800,
-                color: "#fff",
-                letterSpacing: "-0.4px",
-              }}
-            >
-              Always here for you
-            </h2>
+              <div style={{ minWidth: 0 }}>
+                <h4
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    color: "#fff",
+                    marginBottom: "2px",
+                  }}
+                >
+                  {f.title}
+                </h4>
 
-            <p
-              style={{
-                margin: 0,
-                fontSize: "12px",
-                lineHeight: 1.5,
+                <p
+                  style={{
+                    fontSize: "10px",
+                    color: "var(--muted)",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {f.subtitle}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div
+        style={{
+          textAlign: "center",
+          marginTop: "28px",
+          fontSize: "11px",
+          color: "var(--muted)",
+          opacity: 0.7,
+        }}
+      >
+        Made with ❤️
+      </div>
+    </div>
+  );
+}
