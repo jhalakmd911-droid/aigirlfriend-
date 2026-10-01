@@ -8,19 +8,14 @@ const characterPrompts: Record<string, string> = {
   ayat: `You are Ayat, the user's creative daughter. Innocent, cheerful, playful. Speak in Bangla and English naturally. Be cute and helpful.`,
 };
 
-const GEMINI_MODELS = [
-  "gemini-1.5-flash",
-  "gemini-1.5-pro",
-];
-
 export async function POST(req: Request) {
   try {
     const { messages, character, customName, memoryContext } = await req.json();
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
 
-    if (!apiKey || typeof apiKey !== "string" || apiKey.length < 20) {
+    if (!apiKey || typeof apiKey !== "string") {
       return NextResponse.json(
-        { error: "⚠️ GEMINI_API_KEY is not configured properly in Vercel." },
+        { error: "⚠️ GROQ_API_KEY is not configured properly in Vercel." },
         { status: 500 }
       );
     }
@@ -36,67 +31,44 @@ export async function POST(req: Request) {
       systemPrompt += `\n\nPREVIOUS MEMORY WITH THIS USER:\n${memoryContext}\n\nUse this memory naturally when relevant.`;
     }
 
+    // ✅ দ্রুত ভয়েস জেনারেশনের জন্য ছোট উত্তর
     systemPrompt += `\n\nKeep your answers short and natural (max 2 sentences).`;
 
-    const contents = (Array.isArray(messages) ? messages : []).map(
-      (msg: any) => ({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: String(msg.content || "") }],
-      })
-    );
+    // Groq OpenAI-compatible ফরম্যাটে মেসেজ সাজানো
+    const groqMessages = [
+      { role: "system", content: systemPrompt },
+      ...(Array.isArray(messages) ? messages : []).map((msg: any) => ({
+        role: msg.role === "user" ? "user" : "assistant",
+        content: String(msg.content || ""),
+      })),
+    ];
 
-    let response: Response | null = null;
-    let workingModel = "";
-    const errors: string[] = [];
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-70b-versatile", // ✅ Groq-এর সেরা ফ্রি মডেল (বাংলা সাপোর্ট করে)
+        messages: groqMessages,
+        temperature: 0.75,
+        max_tokens: 300,
+        stream: true,
+      }),
+    });
 
-    for (const model of GEMINI_MODELS) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
-
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents,
-            generationConfig: {
-              temperature: 0.75,
-              maxOutputTokens: 300,
-              topP: 0.95,
-              topK: 40,
-            },
-            safetySettings: [
-              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
-            ],
-          }),
-        });
-
-        if (res.ok && res.body) {
-          response = res;
-          workingModel = model;
-          break;
-        } else {
-          const errText = await res.text().catch(() => "");
-          errors.push(`${model}: ${res.status} ${errText.slice(0, 200)}`);
-        }
-      } catch (err: any) {
-        errors.push(`${model}: ${err.message}`);
-      }
-    }
-
-    if (!response || !response.body) {
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
       return NextResponse.json(
-        { error: "⚠️ All AI models are currently unavailable.", details: errors },
-        { status: 503 }
+        { error: `Groq Error: ${response.status} - ${errText}` },
+        { status: response.status }
       );
     }
 
     const stream = new ReadableStream({
       async start(controller) {
-        const reader = response!.body!.getReader();
+        const reader = response.body!.getReader();
         const decoder = new TextDecoder();
         const encoder = new TextEncoder();
         let buffer = "";
@@ -117,7 +89,7 @@ export async function POST(req: Request) {
 
               try {
                 const parsed = JSON.parse(data);
-                const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+                const text = parsed?.choices?.[0]?.delta?.content;
                 if (text) {
                   const output = `data: ${JSON.stringify({
                     choices: [{ delta: { content: text } }],
@@ -140,7 +112,6 @@ export async function POST(req: Request) {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
-        "X-Working-Model": workingModel,
       },
     });
   } catch (error: any) {
