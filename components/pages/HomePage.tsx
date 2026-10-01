@@ -24,12 +24,10 @@ export default function HomePage({ onNavigate, onOpenProfile }: HomePageProps) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
     const saved = localStorage.getItem("user_name");
     if (saved) setUserName(saved);
 
     const hour = new Date().getHours();
-
     if (hour < 12) setGreeting("Good morning");
     else if (hour < 17) setGreeting("Good afternoon");
     else if (hour < 21) setGreeting("Good evening");
@@ -48,6 +46,8 @@ export default function HomePage({ onNavigate, onOpenProfile }: HomePageProps) {
 
   return (
     <div style={{ padding: "10px 0" }}>
+      
+      {/* Greeting Header */}
       <div style={{ marginBottom: "24px" }}>
         <h1
           className="gradient-text"
@@ -66,6 +66,7 @@ export default function HomePage({ onNavigate, onOpenProfile }: HomePageProps) {
         </p>
       </div>
 
+      {/* Hero AI Companion Card */}
       <section
         className="card"
         style={{
@@ -74,6 +75,7 @@ export default function HomePage({ onNavigate, onOpenProfile }: HomePageProps) {
           position: "relative",
           overflow: "hidden",
           minHeight: "200px",
+          borderRadius: "22px",
         }}
       >
         <div
@@ -167,6 +169,7 @@ export default function HomePage({ onNavigate, onOpenProfile }: HomePageProps) {
         </div>
       </section>
 
+      {/* All Features */}
       <div style={{ marginBottom: "12px" }}>
         <h3
           style={{
@@ -255,6 +258,7 @@ export default function HomePage({ onNavigate, onOpenProfile }: HomePageProps) {
         </div>
       </div>
 
+      {/* Footer Badge */}
       <div
         style={{
           textAlign: "center",
