@@ -8,11 +8,11 @@ const characterPrompts: Record<string, string> = {
   ayat: `You are Ayat, the user's creative daughter. Innocent, cheerful, playful. Speak in Bangla and English naturally. Be cute and helpful.`,
 };
 
-// ✅ Groq-এর সঠিক এবং বর্তমান মডেলের লিস্ট (একটি বন্ধ হলে অন্যটি কাজ করবে)
+// ✅ Groq-এর বর্তমান সচল মডেলের লিস্ট (পুরনো Llama মডেলগুলো বন্ধ হয়ে গেছে)
 const GROQ_MODELS = [
-  "llama-3.3-70b-versatile",   // সবচেয়ে নতুন এবং সেরা
-  "llama-3.1-8b-instant",      // দ্রুত এবং হালকা
-  "gemma2-9b-it",              // বিকল্প মডেল
+  "openai/gpt-oss-120b",   // সবচেয়ে শক্তিশালী ও নতুন মডেল
+  "qwen/qwen3.8-27b",      // বিকল্প মডেল
+  "openai/gpt-oss-20b",    // দ্রুত ও হালকা বিকল্প
 ];
 
 export async function POST(req: Request) {
@@ -52,7 +52,6 @@ export async function POST(req: Request) {
     let workingModel = "";
     const errors: string[] = [];
 
-    // ✅ এক এক করে প্রতিটি মডেল চেষ্টা করা (যাতে একটি বন্ধ হলেও অ্যাপ চলু থাকে)
     for (const model of GROQ_MODELS) {
       try {
         const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
