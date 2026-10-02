@@ -4,37 +4,12 @@ const characterPrompts: Record<string, string> = {
   jan: `You are Jan, the user's loving girlfriend and personal assistant. Deeply caring, warm, and romantic. Speak in Bangla and English naturally.`,
   lily: `You are Lily, the user's professional business manager. Professional, smart, organized. Speak in Bangla and English naturally.`,
   emma: `You are Emma, the user's deeply romantic girlfriend. Deeply in love, sweet, soft, and caring. Speak in Bangla and English naturally.`,
-  javed: `You are Mira, the user's personal assistant like JARVIS. You are a calm, professional, respectful female assistant. Speak in Bangla and English naturally. Always address the user politely and helpfully.`,
-  ayat: `You are Nadia, the user's creative and cheerful young friend. Innocent, playful, and full of energy. Speak in Bangla and English naturally. Be cute and helpful.`,
+  javed: `You are Mira, the user's personal assistant like JARVIS. You are a calm, professional, respectful female assistant. Speak in Bangla and English naturally.`,
+  ayat: `You are Nadia, the user's creative and cheerful young friend. Innocent, playful, and full of energy. Speak in Bangla and English naturally.`,
 };
 
-const GROQ_MODELS = [
-  "llama-3.3-70b-versatile",
-  "llama-3.1-8b-instant",
-];
-
-async function tryGroq(model: string, groqMessages: any[], apiKey: string): Promise<Response | null> {
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: groqMessages,
-        temperature: 0.7,
-        max_tokens: 200,
-        stream: true,
-      }),
-    });
-    if (res.ok && res.body) return res;
-    return null;
-  } catch {
-    return null;
-  }
-}
+// ✅ শুধু একটি মডেল — প্রতিদিন ১৪,৪০০টি রিকোয়েস্ট
+const GROQ_MODEL = "llama-3.1-8b-instant";
 
 export async function POST(req: Request) {
   try {
@@ -59,24 +34,35 @@ export async function POST(req: Request) {
       })),
     ];
 
-    let response: Response | null = null;
-    let workingModel = "";
+    // ✅ শুধুমাত্র একটি রিকোয়েস্ট — কোনো retry নেই
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: groqMessages,
+        temperature: 0.7,
+        max_tokens: 200,
+        stream: true,
+      }),
+    });
 
-    for (const model of GROQ_MODELS) {
-      response = await tryGroq(model, groqMessages, apiKey);
-      if (response) { workingModel = model; break; }
-    }
-
-    if (!response) {
-      await new Promise((r) => setTimeout(r, 3000));
-      for (const model of GROQ_MODELS) {
-        response = await tryGroq(model, groqMessages, apiKey);
-        if (response) { workingModel = model; break; }
+    if (!response.ok || !response.body) {
+      const errText = await response.text().catch(() => "");
+      let errorMessage = "Groq busy. Please wait 1 minute and try again.";
+      
+      // If rate limited, show clearer message
+      if (response.status === 429) {
+        errorMessage = "Rate limit reached. Please wait 1 minute.";
       }
-    }
-
-    if (!response || !response.body) {
-      return NextResponse.json({ error: "Groq busy. Please wait and try again." }, { status: 503 });
+      
+      return NextResponse.json(
+        { error: errorMessage, details: errText.slice(0, 150) },
+        { status: response.status }
+      );
     }
 
     const stream = new ReadableStream({
@@ -119,7 +105,7 @@ export async function POST(req: Request) {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
-        "X-Working-Model": workingModel,
+        "X-Working-Model": GROQ_MODEL,
       },
     });
   } catch (error: any) {
