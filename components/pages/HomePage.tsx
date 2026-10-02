@@ -34,10 +34,13 @@ export default function HomePage({ onNavigate, onOpenProfile }: HomePageProps) {
     else setGreeting("Good night");
   }, []);
 
+  // ✅ Fix: "character" আর chat-এ যাবে না, character tab-এ যাবে
   const handleFeatureClick = (id: string) => {
-    if (id === "export") onNavigate("settings");
-    else if (id === "character") onNavigate("chat");
-    else onNavigate(id);
+    if (id === "export") {
+      onNavigate("settings");
+    } else {
+      onNavigate(id);
+    }
   };
 
   return (
@@ -175,7 +178,6 @@ export default function HomePage({ onNavigate, onOpenProfile }: HomePageProps) {
             justifyContent: "center",
           }}
         >
-          {/* Badge */}
           <div
             style={{
               alignSelf: "flex-start",
