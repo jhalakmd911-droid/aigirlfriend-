@@ -82,6 +82,19 @@ export default function Home() {
         return <MemoryPage />;
       case "settings":
         return <SettingsPage onNavigate={handleNavigate} />;
+
+      // ✅ নতুন: Character Select পেজ
+      case "character":
+        return (
+          <CharacterSelectPage
+            onSelect={(charId) => {
+              setProfileChar(null);
+              setActiveTab("home");
+            }}
+            onBack={goHome}
+          />
+        );
+
       case "home":
       default:
         return (
