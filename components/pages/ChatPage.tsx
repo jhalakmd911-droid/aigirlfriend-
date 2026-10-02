@@ -91,7 +91,8 @@ export default function ChatPage() {
   const getCharacter = (): Character => characters.find((c) => c.id === selectedCharacter) || characters[0];
   const getDisplayName = (): string => customNames[selectedCharacter] || getCharacter().name;
 
-  // Get the best available photo (custom > default)
+  // ✅ Fix: only use custom photo if it's a real uploaded image (data: URL)
+  // Otherwise always use the default character photo
   const getCharImage = (charId: string): string => {
     const custom = charPhotos[charId];
     if (custom && custom.startsWith("data:")) return custom;
@@ -246,11 +247,8 @@ export default function ChatPage() {
     localStorage.removeItem(`memory_${selectedCharacter}`);
   };
 
+  // ✅ Always show character photo — never emoji
   const renderAvatar = (charId: string, size: number) => {
-    const custom = charPhotos[charId];
-    if (custom && !custom.startsWith("data:")) {
-      return <span style={{ fontSize: size * 0.55, lineHeight: 1 }}>{custom}</span>;
-    }
     return (
       <img
         src={getCharImage(charId)}
@@ -285,7 +283,7 @@ export default function ChatPage() {
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            objectPosition: "center top",
+            objectPosition: "center 15%",
           }}
         />
         <div
@@ -293,7 +291,7 @@ export default function ChatPage() {
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(180deg, rgba(5,3,13,0.70) 0%, rgba(5,3,13,0.35) 30%, rgba(5,3,13,0.65) 65%, rgba(5,3,13,0.97) 100%)",
+              "linear-gradient(180deg, rgba(5,3,13,0.20) 0%, rgba(5,3,13,0.10) 25%, rgba(5,3,13,0.55) 60%, rgba(5,3,13,0.97) 100%)",
           }}
         />
       </div>
@@ -330,53 +328,65 @@ export default function ChatPage() {
             fontWeight: 700,
             cursor: "pointer",
             marginBottom: "8px",
+            backdropFilter: "blur(12px)",
           }}
         >
           ← Home
         </button>
 
-        {/* Header */}
+        {/* Header — NO BOX, floats over photo */}
         <header
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: "8px",
-            padding: "8px 10px",
-            background: "rgba(15,8,30,0.65)",
-            backdropFilter: "blur(18px)",
-            WebkitBackdropFilter: "blur(18px)",
-            border: "1px solid rgba(139,92,246,0.35)",
-            borderRadius: "16px",
+            padding: "4px 2px",
             marginBottom: "10px",
-            boxShadow: "0 0 22px rgba(255,45,149,0.18)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
             <button
               onClick={() => setShowPhotoMenu(true)}
               style={{
-                width: "44px",
-                height: "44px",
+                width: "46px",
+                height: "46px",
                 borderRadius: "50%",
                 overflow: "hidden",
                 display: "grid",
                 placeItems: "center",
                 background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
-                border: "2px solid rgba(255,255,255,0.2)",
+                border: "2px solid rgba(255,255,255,0.35)",
                 padding: 0,
                 cursor: "pointer",
-                boxShadow: "0 0 18px rgba(255,45,149,0.5)",
+                boxShadow: "0 0 20px rgba(255,45,149,0.6)",
                 flexShrink: 0,
               }}
             >
-              {renderAvatar(selectedCharacter, 44)}
+              {renderAvatar(selectedCharacter, 46)}
             </button>
             <div style={{ minWidth: 0 }}>
-              <h2 style={{ fontSize: "15px", fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.1 }}>
+              <h2
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 800,
+                  color: "#fff",
+                  margin: 0,
+                  lineHeight: 1.1,
+                  textShadow: "0 2px 8px rgba(0,0,0,0.9)",
+                }}
+              >
                 {displayName}
               </h2>
-              <p style={{ fontSize: "10px", color: "#22c55e", margin: "2px 0 0", fontWeight: 600 }}>
+              <p
+                style={{
+                  fontSize: "11px",
+                  color: "#22c55e",
+                  margin: "2px 0 0",
+                  fontWeight: 600,
+                  textShadow: "0 2px 6px rgba(0,0,0,0.9)",
+                }}
+              >
                 ● Online
               </p>
             </div>
@@ -387,13 +397,14 @@ export default function ChatPage() {
               onClick={() => setShowMemory(true)}
               style={{
                 padding: "7px 11px",
-                borderRadius: "11px",
-                background: "rgba(139,92,246,0.18)",
-                border: "1px solid rgba(139,92,246,0.45)",
+                borderRadius: "12px",
+                background: "rgba(20,12,40,0.72)",
+                border: "1px solid rgba(139,92,246,0.55)",
                 color: "#fff",
                 fontSize: "11px",
                 fontWeight: 700,
                 cursor: "pointer",
+                backdropFilter: "blur(12px)",
               }}
             >
               🧠 {memories.length}
@@ -402,13 +413,14 @@ export default function ChatPage() {
               onClick={() => setShowNameInput(true)}
               style={{
                 padding: "7px 11px",
-                borderRadius: "11px",
-                background: "rgba(139,92,246,0.18)",
-                border: "1px solid rgba(139,92,246,0.45)",
+                borderRadius: "12px",
+                background: "rgba(20,12,40,0.72)",
+                border: "1px solid rgba(139,92,246,0.55)",
                 color: "#fff",
                 fontSize: "11px",
                 fontWeight: 700,
                 cursor: "pointer",
+                backdropFilter: "blur(12px)",
               }}
             >
               ✏️
@@ -576,10 +588,11 @@ export default function ChatPage() {
                       borderRadius: "8px",
                       fontSize: "10px",
                       fontWeight: 700,
-                      background: "rgba(139,92,246,0.22)",
-                      border: "1px solid rgba(139,92,246,0.5)",
+                      background: "rgba(139,92,246,0.35)",
+                      border: "1px solid rgba(139,92,246,0.6)",
                       color: "#fff",
                       cursor: "pointer",
+                      backdropFilter: "blur(10px)",
                     }}
                   >
                     🔊 Read
@@ -591,10 +604,11 @@ export default function ChatPage() {
                       borderRadius: "8px",
                       fontSize: "10px",
                       fontWeight: 700,
-                      background: "rgba(239,68,68,0.22)",
-                      border: "1px solid rgba(239,68,68,0.5)",
+                      background: "rgba(239,68,68,0.35)",
+                      border: "1px solid rgba(239,68,68,0.6)",
                       color: "#fff",
                       cursor: "pointer",
+                      backdropFilter: "blur(10px)",
                     }}
                   >
                     ⏹ Stop
@@ -624,12 +638,13 @@ export default function ChatPage() {
               borderRadius: "50%",
               padding: 0,
               flexShrink: 0,
-              background: "rgba(139,92,246,0.22)",
-              border: "1px solid rgba(139,92,246,0.5)",
+              background: "rgba(20,12,40,0.72)",
+              border: "1px solid rgba(139,92,246,0.6)",
               color: "#fff",
               fontSize: "17px",
               cursor: inputValue.trim() ? "pointer" : "not-allowed",
               opacity: inputValue.trim() ? 1 : 0.5,
+              backdropFilter: "blur(12px)",
             }}
           >
             🎙️
@@ -652,6 +667,7 @@ export default function ChatPage() {
               border: "1px solid rgba(139,92,246,0.5)",
               color: "#fff",
               outline: "none",
+              backdropFilter: "blur(12px)",
             }}
           />
           <button
