@@ -8,11 +8,51 @@ interface CharacterSelectPageProps {
 }
 
 const characters = [
-  { id: "jan", name: "Jan", icon: "💫", subtitle: "Sweet & Caring", tag: "Popular", color: "#FF2D95" },
-  { id: "lily", name: "Lily", icon: "💼", subtitle: "Playful & Bold", tag: "Popular", color: "#8B5CF6" },
-  { id: "emma", name: "Emma", icon: "💕", subtitle: "Smart & Romantic", tag: "Popular", color: "#EC4899" },
-  { id: "javed", name: "Mira", icon: "🤖", subtitle: "Smart & Loyal", tag: "Realistic", color: "#10B981" },
-  { id: "ayat", name: "Nadia", icon: "✨", subtitle: "Creative & Cute", tag: "Anime", color: "#F59E0B" },
+  {
+    id: "jan",
+    name: "Jan",
+    icon: "💫",
+    subtitle: "Sweet & Caring",
+    tag: "Popular",
+    color: "#FF2D95",
+    photo: "/images/Jan-ai-generated-8285212.jpg",
+  },
+  {
+    id: "lily",
+    name: "Lily",
+    icon: "💼",
+    subtitle: "Playful & Bold",
+    tag: "Popular",
+    color: "#8B5CF6",
+    photo: "/images/Lily_yacuzzi-ai-8455080.png",
+  },
+  {
+    id: "emma",
+    name: "Emma",
+    icon: "💕",
+    subtitle: "Smart & Romantic",
+    tag: "Popular",
+    color: "#EC4899",
+    photo: "/images/Emma-stuff-ai-generated-8494624.jpg",
+  },
+  {
+    id: "javed",
+    name: "Mira",
+    icon: "🤖",
+    subtitle: "Smart & Loyal",
+    tag: "Realistic",
+    color: "#10B981",
+    photo: "/images/Mira-ai-8612900.jpg",
+  },
+  {
+    id: "ayat",
+    name: "Nadia",
+    icon: "✨",
+    subtitle: "Creative & Cute",
+    tag: "Anime",
+    color: "#F59E0B",
+    photo: "/images/Nadia007-ai-generated-8822022.jpg",
+  },
 ];
 
 const categories = ["All", "Popular", "Anime", "Realistic", "Fantasy"];
@@ -37,7 +77,6 @@ export default function CharacterSelectPage({ onSelect, onBack }: CharacterSelec
         color: "#fff",
       }}
     >
-      {/* Back Button */}
       {onBack && (
         <button
           onClick={onBack}
@@ -61,7 +100,6 @@ export default function CharacterSelectPage({ onSelect, onBack }: CharacterSelec
         </button>
       )}
 
-      {/* Header */}
       <div style={{ textAlign: "center", marginBottom: "14px" }}>
         <h1
           style={{
@@ -146,7 +184,7 @@ export default function CharacterSelectPage({ onSelect, onBack }: CharacterSelec
               key={char.id}
               style={{
                 flexShrink: 0,
-                width: "105px",
+                width: "110px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -158,33 +196,38 @@ export default function CharacterSelectPage({ onSelect, onBack }: CharacterSelec
                 boxShadow: `inset 0 0 14px ${char.color}0d, 0 4px 14px rgba(0,0,0,0.25)`,
               }}
             >
-              {/* Photo circle */}
+              {/* Photo — real image */}
               <div
                 style={{
-                  width: "70px",
-                  height: "70px",
+                  width: "90px",
+                  height: "90px",
                   borderRadius: "50%",
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: "30px",
+                  overflow: "hidden",
                   marginBottom: "8px",
                   background: `linear-gradient(145deg, ${char.color}, ${char.color}aa)`,
                   boxShadow: `0 0 18px ${char.color}55`,
-                  border: "1.5px solid rgba(255,255,255,0.18)",
-                  overflow: "hidden",
+                  border: `2px solid ${char.color}`,
+                  display: "grid",
+                  placeItems: "center",
                 }}
               >
                 <img
-                  src={`/characters/${char.id}.png`}
+                  src={char.photo}
                   alt={char.name}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    objectPosition: "center top",
+                    display: "block",
+                  }}
                   onError={(e) => {
                     const el = e.currentTarget as HTMLImageElement;
                     el.style.display = "none";
                     const parent = el.parentElement;
-                    if (parent && !parent.dataset.fallback) {
-                      parent.dataset.fallback = "1";
+                    if (parent) {
                       parent.textContent = char.icon;
+                      parent.style.fontSize = "34px";
                     }
                   }}
                 />
@@ -218,7 +261,7 @@ export default function CharacterSelectPage({ onSelect, onBack }: CharacterSelec
                 {char.subtitle}
               </div>
 
-              {/* Select Button */}
+              {/* Select */}
               <button
                 onClick={() => onSelect(char.id)}
                 style={{
