@@ -16,7 +16,7 @@ export default function OnboardingPage({
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
-        padding: "40px 20px",
+        padding: "30px 20px",
         boxSizing: "border-box",
         position: "relative",
         overflow: "hidden",
@@ -59,13 +59,13 @@ export default function OnboardingPage({
       <div
         style={{
           position: "absolute",
-          width: "360px",
-          height: "360px",
+          width: "280px",
+          height: "280px",
           borderRadius: "50%",
           background:
             "radial-gradient(circle, rgba(255,45,149,0.30), transparent 70%)",
-          top: "5%",
-          left: "-120px",
+          top: "8%",
+          left: "-100px",
           zIndex: 1,
           pointerEvents: "none",
         }}
@@ -76,25 +76,24 @@ export default function OnboardingPage({
         style={{
           position: "relative",
           zIndex: 2,
-          maxWidth: "420px",
+          maxWidth: "380px",
           width: "100%",
         }}
       >
         {/* Heart Logo */}
         <div
           style={{
-            width: "120px",
-            height: "120px",
+            width: "90px",
+            height: "90px",
             borderRadius: "50%",
-            background:
-              "linear-gradient(135deg, #FF2D95 0%, #8B5CF6 100%)",
+            background: "linear-gradient(135deg, #FF2D95 0%, #8B5CF6 100%)",
             display: "grid",
             placeItems: "center",
-            fontSize: "58px",
-            margin: "0 auto 28px",
+            fontSize: "44px",
+            margin: "0 auto 20px",
             boxShadow:
-              "0 0 60px rgba(255,45,149,0.60), 0 0 100px rgba(139,92,246,0.25)",
-            border: "4px solid rgba(255,255,255,0.15)",
+              "0 0 45px rgba(255,45,149,0.60), 0 0 80px rgba(139,92,246,0.25)",
+            border: "3px solid rgba(255,255,255,0.15)",
           }}
         >
           ♡
@@ -103,11 +102,11 @@ export default function OnboardingPage({
         {/* Title */}
         <h1
           style={{
-            margin: "0 0 10px",
-            fontSize: "clamp(38px, 10vw, 56px)",
+            margin: "0 0 8px",
+            fontSize: "clamp(30px, 8.5vw, 44px)",
             lineHeight: 1.05,
             fontWeight: 800,
-            letterSpacing: "-1.5px",
+            letterSpacing: "-1.2px",
             background:
               "linear-gradient(90deg, #FF2D95 0%, #C84CFF 55%, #8B5CF6 100%)",
             WebkitBackgroundClip: "text",
@@ -120,8 +119,8 @@ export default function OnboardingPage({
         {/* Subtitle */}
         <p
           style={{
-            margin: "0 0 12px",
-            fontSize: "clamp(18px, 5vw, 24px)",
+            margin: "0 0 10px",
+            fontSize: "clamp(15px, 4vw, 19px)",
             color: "#ffffff",
           }}
         >
@@ -131,8 +130,8 @@ export default function OnboardingPage({
         {/* Features */}
         <p
           style={{
-            margin: "0 0 8px",
-            fontSize: "15px",
+            margin: "0 0 6px",
+            fontSize: "13px",
             color: "rgba(255,255,255,0.82)",
           }}
         >
@@ -142,8 +141,8 @@ export default function OnboardingPage({
         {/* Tagline */}
         <p
           style={{
-            margin: "0 0 38px",
-            fontSize: "15px",
+            margin: "0 0 26px",
+            fontSize: "13px",
             color: "rgba(255,255,255,0.68)",
           }}
         >
@@ -156,19 +155,19 @@ export default function OnboardingPage({
           onClick={onGetStarted}
           style={{
             width: "100%",
-            minHeight: "58px",
+            minHeight: "50px",
             border: "none",
-            borderRadius: "20px",
-            padding: "15px 24px",
-            marginBottom: "12px",
+            borderRadius: "18px",
+            padding: "12px 20px",
+            marginBottom: "10px",
             cursor: "pointer",
             color: "#ffffff",
-            fontSize: "18px",
+            fontSize: "16px",
             fontWeight: 700,
             background:
               "linear-gradient(90deg, #FF239D 0%, #BD42E8 50%, #9251FF 100%)",
             boxShadow:
-              "0 12px 35px rgba(255,30,160,0.38), 0 0 25px rgba(155,70,255,0.22)",
+              "0 10px 30px rgba(255,30,160,0.38), 0 0 20px rgba(155,70,255,0.22)",
           }}
         >
           Get Started
@@ -180,16 +179,16 @@ export default function OnboardingPage({
           onClick={() => alert("Sign In feature coming soon!")}
           style={{
             width: "100%",
-            minHeight: "58px",
-            borderRadius: "20px",
-            padding: "15px 24px",
+            minHeight: "50px",
+            borderRadius: "18px",
+            padding: "12px 20px",
             cursor: "pointer",
             color: "#ffffff",
-            fontSize: "18px",
+            fontSize: "16px",
             fontWeight: 700,
             background: "rgba(22,10,42,0.72)",
             border: "2px solid rgba(157,77,255,0.65)",
-            boxShadow: "0 8px 25px rgba(75,20,120,0.25)",
+            boxShadow: "0 8px 22px rgba(75,20,120,0.25)",
           }}
         >
           Sign In
@@ -198,12 +197,12 @@ export default function OnboardingPage({
         {/* Privacy */}
         <div
           style={{
-            marginTop: "30px",
+            marginTop: "22px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: "7px",
-            fontSize: "13px",
+            gap: "6px",
+            fontSize: "12px",
             color: "rgba(255,255,255,0.68)",
           }}
         >
