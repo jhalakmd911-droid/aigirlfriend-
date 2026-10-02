@@ -13,14 +13,15 @@ interface Character {
   name: string;
   icon: string;
   color: string;
+  photo: string;
 }
 
 const characters: Character[] = [
-  { id: "jan", name: "Jan", icon: "💫", color: "#FF2D95" },
-  { id: "lily", name: "Lily", icon: "💼", color: "#8B5CF6" },
-  { id: "emma", name: "Emma", icon: "💕", color: "#EC4899" },
-  { id: "javed", name: "Mira", icon: "🤖", color: "#10B981" },
-  { id: "ayat", name: "Nadia", icon: "✨", color: "#F59E0B" },
+  { id: "jan", name: "Jan", icon: "💫", color: "#FF2D95", photo: "/images/Jan2-8404588.png" },
+  { id: "lily", name: "Lily", icon: "💼", color: "#8B5CF6", photo: "/images/Lile2-8059037.jpg" },
+  { id: "emma", name: "Emma", icon: "💕", color: "#EC4899", photo: "/images/Emma-stuff-ai-generated-8494624.jpg" },
+  { id: "javed", name: "Mira", icon: "🤖", color: "#10B981", photo: "/images/Mira2-8296163.jpg" },
+  { id: "ayat", name: "Nadia", icon: "✨", color: "#F59E0B", photo: "/images/Nadia007-ai-generated-8822022.jpg" },
 ];
 
 export default function MemoryPage() {
@@ -31,14 +32,12 @@ export default function MemoryPage() {
   const [newMemoryText, setNewMemoryText] = useState("");
   const [customNames, setCustomNames] = useState<Record<string, string>>({});
 
-  // Load custom names
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem("customNames");
     if (saved) { try { setCustomNames(JSON.parse(saved)); } catch (e) {} }
   }, []);
 
-  // Load memories for selected character
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mem = localStorage.getItem(`memory_${selectedCharacter}`);
@@ -112,36 +111,13 @@ export default function MemoryPage() {
           width: "100%",
           maxWidth: "480px",
           margin: "0 auto",
-          padding: "8px 12px 0",
+          padding: "14px 12px 0",
           boxSizing: "border-box",
           display: "flex",
           flexDirection: "column",
           height: "100%",
         }}
       >
-        {/* Home Button */}
-        <button
-          onClick={() => { if (typeof window !== "undefined") window.history.back(); }}
-          style={{
-            alignSelf: "flex-start",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "4px",
-            padding: "5px 11px",
-            borderRadius: "999px",
-            background: "rgba(20,12,40,0.72)",
-            border: "1px solid rgba(139,92,246,0.55)",
-            color: "#fff",
-            fontSize: "10px",
-            fontWeight: 700,
-            cursor: "pointer",
-            marginBottom: "6px",
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          ← Home
-        </button>
-
         {/* Header */}
         <div style={{ marginBottom: "8px", paddingLeft: "2px" }}>
           <h1
@@ -185,17 +161,31 @@ export default function MemoryPage() {
             <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span
                 style={{
-                  width: "28px",
-                  height: "28px",
+                  width: "30px",
+                  height: "30px",
                   borderRadius: "50%",
+                  overflow: "hidden",
                   display: "grid",
                   placeItems: "center",
                   background: `linear-gradient(135deg, ${char.color}, ${char.color}aa)`,
-                  fontSize: "14px",
+                  border: `1.5px solid ${char.color}`,
                   flexShrink: 0,
                 }}
               >
-                {char.icon}
+                <img
+                  src={char.photo}
+                  alt={char.name}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  onError={(e) => {
+                    const el = e.currentTarget as HTMLImageElement;
+                    el.style.display = "none";
+                    const parent = el.parentElement;
+                    if (parent && !parent.dataset.fb) {
+                      parent.dataset.fb = "1";
+                      parent.textContent = char.icon;
+                    }
+                  }}
+                />
               </span>
               <span style={{ fontSize: "12px", fontWeight: 800 }}>{displayName}</span>
             </span>
@@ -243,17 +233,31 @@ export default function MemoryPage() {
                   >
                     <span
                       style={{
-                        width: "26px",
-                        height: "26px",
+                        width: "28px",
+                        height: "28px",
                         borderRadius: "50%",
+                        overflow: "hidden",
                         display: "grid",
                         placeItems: "center",
                         background: `linear-gradient(135deg, ${c.color}, ${c.color}aa)`,
-                        fontSize: "13px",
+                        border: `1.5px solid ${c.color}`,
                         flexShrink: 0,
                       }}
                     >
-                      {c.icon}
+                      <img
+                        src={c.photo}
+                        alt={c.name}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        onError={(e) => {
+                          const el = e.currentTarget as HTMLImageElement;
+                          el.style.display = "none";
+                          const parent = el.parentElement;
+                          if (parent && !parent.dataset.fb) {
+                            parent.dataset.fb = "1";
+                            parent.textContent = c.icon;
+                          }
+                        }}
+                      />
                     </span>
                     <div>{cName}</div>
                   </button>
