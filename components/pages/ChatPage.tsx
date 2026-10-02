@@ -26,14 +26,15 @@ interface Character {
   name: string;
   icon: string;
   subtitle: string;
+  defaultPhoto: string;
 }
 
 const characters: Character[] = [
-  { id: "jan", name: "Jan", icon: "💫", subtitle: "Girlfriend & Assistant" },
-  { id: "lily", name: "Lily", icon: "💼", subtitle: "Business Manager" },
-  { id: "emma", name: "Emma", icon: "💕", subtitle: "Romantic Girlfriend" },
-  { id: "javed", name: "Javed", icon: "🤖", subtitle: "Personal Assistant" },
-  { id: "ayat", name: "Ayat", icon: "✨", subtitle: "Creative & Social" },
+  { id: "jan", name: "Jan", icon: "💫", subtitle: "Girlfriend & Assistant", defaultPhoto: "/images/Jan-ai-generated-8285212.jpg" },
+  { id: "lily", name: "Lily", icon: "💼", subtitle: "Business Manager", defaultPhoto: "/images/Lily_yacuzzi-ai-8455080.png" },
+  { id: "emma", name: "Emma", icon: "💕", subtitle: "Romantic Girlfriend", defaultPhoto: "/images/Emma-stuff-ai-generated-8494624.jpg" },
+  { id: "javed", name: "Mira", icon: "🤖", subtitle: "Personal Assistant", defaultPhoto: "/images/Mira-ai-8612900.jpg" },
+  { id: "ayat", name: "Nadia", icon: "✨", subtitle: "Creative & Social", defaultPhoto: "/images/Nadia007-ai-generated-8822022.jpg" },
 ];
 
 const emojiOptions = ["💫", "💼", "💕", "🤖", "✨", "🌸", "🌙", "🎀", "🦋", "⭐", "🌟", "💐"];
@@ -89,6 +90,14 @@ export default function ChatPage() {
 
   const getCharacter = (): Character => characters.find((c) => c.id === selectedCharacter) || characters[0];
   const getDisplayName = (): string => customNames[selectedCharacter] || getCharacter().name;
+
+  // Get the best available photo (custom > default)
+  const getCharImage = (charId: string): string => {
+    const custom = charPhotos[charId];
+    if (custom && custom.startsWith("data:")) return custom;
+    const found = characters.find((c) => c.id === charId);
+    return found?.defaultPhoto || "/images/Jan-ai-generated-8285212.jpg";
+  };
 
   const saveMemory = (text: string) => {
     const newItem: MemoryItem = {
@@ -237,114 +246,455 @@ export default function ChatPage() {
     localStorage.removeItem(`memory_${selectedCharacter}`);
   };
 
-  const renderPhoto = (charId: string, size: number) => {
-    const photo = charPhotos[charId];
-    const fallback = characters.find((c) => c.id === charId)?.icon || "💫";
-    if (photo && photo.startsWith("data:")) {
-      return <img src={photo} alt={charId} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />;
+  const renderAvatar = (charId: string, size: number) => {
+    const custom = charPhotos[charId];
+    if (custom && !custom.startsWith("data:")) {
+      return <span style={{ fontSize: size * 0.55, lineHeight: 1 }}>{custom}</span>;
     }
-    return <span style={{ fontSize: size * 0.55, lineHeight: 1 }}>{photo || fallback}</span>;
+    return (
+      <img
+        src={getCharImage(charId)}
+        alt={charId}
+        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+      />
+    );
   };
 
   const char = getCharacter();
   const displayName = getDisplayName();
+  const bgImage = getCharImage(selectedCharacter);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", paddingTop: "20px", paddingBottom: "110px" }}>
-      
-      {/* Header */}
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 0 16px", borderBottom: "1px solid rgba(139,92,246,0.25)", marginBottom: "16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button onClick={() => setShowPhotoMenu(true)} style={{ width: "48px", height: "48px", borderRadius: "50%", background: "linear-gradient(135deg, #FF2D95, #8B5CF6)", display: "grid", placeItems: "center", color: "#fff", fontSize: "22px", boxShadow: "0 0 22px rgba(255,45,149,0.55)", cursor: "pointer", overflow: "hidden", border: "2px solid rgba(255,255,255,0.2)", padding: 0 }}>
-            {renderPhoto(selectedCharacter, 48)}
-          </button>
-          <div>
-            <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#fff" }}>{displayName}</h2>
-            <p style={{ fontSize: "12px", color: "#22c55e", marginTop: "2px" }}>● Online</p>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: "6px" }}>
-          <button type="button" onClick={() => setShowMemory(true)} className="btn btn-secondary" style={{ padding: "6px 12px", borderRadius: "10px", fontSize: "12px", minHeight: "auto" }}>
-            🧠 {memories.length}
-          </button>
-          <button type="button" onClick={() => setShowNameInput(true)} className="btn btn-secondary" style={{ padding: "6px 12px", borderRadius: "10px", fontSize: "12px", minHeight: "auto" }}>
-            ✏️
-          </button>
-        </div>
-      </header>
-
-      {/* Character Switcher */}
-      <div style={{ position: "relative", marginBottom: "12px" }}>
-        <button onClick={() => setShowCharacterMenu(!showCharacterMenu)} className="btn btn-secondary" style={{ width: "100%", justifyContent: "space-between", padding: "12px 16px", borderRadius: "14px" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ width: "32px", height: "32px", borderRadius: "50%", overflow: "hidden", display: "grid", placeItems: "center", background: "linear-gradient(135deg, #FF2D95, #8B5CF6)" }}>
-              {renderPhoto(selectedCharacter, 32)}
-            </span>
-            {displayName}
-          </span>
-          <span>{showCharacterMenu ? "▲" : "▼"}</span>
-        </button>
-
-        {showCharacterMenu && (
-          <div className="glass" style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: "4px", borderRadius: "14px", padding: "6px", zIndex: 100 }}>
-            {characters.map((c) => {
-              const isSelected = selectedCharacter === c.id;
-              const cName = customNames[c.id] || c.name;
-              return (
-                <button key={c.id} onClick={() => { setSelectedCharacter(c.id); setShowCharacterMenu(false); setMessages([{ id: Date.now().toString(), text: `Hi! I'm ${cName}. ${c.subtitle}. How can I help you?`, sender: "ai", timestamp: new Date() }]); }} style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", background: isSelected ? "linear-gradient(135deg, rgba(255,45,149,0.3), rgba(139,92,246,0.3))" : "transparent", border: "none", color: "#fff", fontSize: "13px", fontWeight: isSelected ? 700 : 500, cursor: "pointer", textAlign: "left", display: "flex", gap: "10px", alignItems: "center" }}>
-                  <span style={{ width: "32px", height: "32px", borderRadius: "50%", overflow: "hidden", display: "grid", placeItems: "center", background: "linear-gradient(135deg, #FF2D95, #8B5CF6)" }}>
-                    {renderPhoto(c.id, 32)}
-                  </span>
-                  <div>
-                    <div>{cName}</div>
-                    <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>{c.subtitle}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100dvh",
+        position: "relative",
+        overflow: "hidden",
+        background: "#05030d",
+        paddingBottom: "72px",
+      }}
+    >
+      {/* Background character photo */}
+      <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+        <img
+          src={bgImage}
+          alt={char.name}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center top",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(180deg, rgba(5,3,13,0.70) 0%, rgba(5,3,13,0.35) 30%, rgba(5,3,13,0.65) 65%, rgba(5,3,13,0.97) 100%)",
+          }}
+        />
       </div>
 
-      {/* Chat Area */}
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px", paddingRight: "4px" }}>
-        {messages.map((m) => (
-          <div key={m.id} style={{ display: "flex", flexDirection: "column", alignItems: m.sender === "user" ? "flex-end" : "flex-start" }}>
-            <div className={m.sender === "user" ? "bubble-user" : "bubble-ai"} style={{ maxWidth: "82%", padding: "12px 16px", fontSize: "14px", lineHeight: 1.55, wordWrap: "break-word", whiteSpace: "pre-wrap" }}>
-              {m.text || (loading ? "● ● ●" : "")}
+      {/* Foreground content */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          width: "100%",
+          maxWidth: "480px",
+          margin: "0 auto",
+          padding: "10px 12px 0",
+          boxSizing: "border-box",
+        }}
+      >
+        {/* Home Button */}
+        <button
+          onClick={() => { if (typeof window !== "undefined") window.history.back(); }}
+          style={{
+            alignSelf: "flex-start",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "6px 12px",
+            borderRadius: "999px",
+            background: "rgba(20,12,40,0.72)",
+            border: "1px solid rgba(139,92,246,0.55)",
+            color: "#fff",
+            fontSize: "11px",
+            fontWeight: 700,
+            cursor: "pointer",
+            marginBottom: "8px",
+          }}
+        >
+          ← Home
+        </button>
+
+        {/* Header */}
+        <header
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "8px",
+            padding: "8px 10px",
+            background: "rgba(15,8,30,0.65)",
+            backdropFilter: "blur(18px)",
+            WebkitBackdropFilter: "blur(18px)",
+            border: "1px solid rgba(139,92,246,0.35)",
+            borderRadius: "16px",
+            marginBottom: "10px",
+            boxShadow: "0 0 22px rgba(255,45,149,0.18)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+            <button
+              onClick={() => setShowPhotoMenu(true)}
+              style={{
+                width: "44px",
+                height: "44px",
+                borderRadius: "50%",
+                overflow: "hidden",
+                display: "grid",
+                placeItems: "center",
+                background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                border: "2px solid rgba(255,255,255,0.2)",
+                padding: 0,
+                cursor: "pointer",
+                boxShadow: "0 0 18px rgba(255,45,149,0.5)",
+                flexShrink: 0,
+              }}
+            >
+              {renderAvatar(selectedCharacter, 44)}
+            </button>
+            <div style={{ minWidth: 0 }}>
+              <h2 style={{ fontSize: "15px", fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.1 }}>
+                {displayName}
+              </h2>
+              <p style={{ fontSize: "10px", color: "#22c55e", margin: "2px 0 0", fontWeight: 600 }}>
+                ● Online
+              </p>
             </div>
-
-            {m.sender === "ai" && m.text && !loading && (
-              <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
-                <button onClick={() => directRead(m.text)} className="btn btn-secondary" style={{ padding: "4px 10px", borderRadius: "8px", fontSize: "11px", minHeight: "auto" }}>🔊 Read</button>
-                <button onClick={stopReading} className="btn btn-secondary" style={{ padding: "4px 10px", borderRadius: "8px", fontSize: "11px", minHeight: "auto" }}>⏹ Stop</button>
-              </div>
-            )}
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
 
-      {/* Input Area */}
-      <div style={{ position: "fixed", bottom: "80px", left: "0", right: "0", padding: "12px 16px", background: "rgba(5,1,15,0.92)", backdropFilter: "blur(18px)", borderTop: "1px solid rgba(139,92,246,0.28)", display: "flex", gap: "8px", alignItems: "center", zIndex: 10 }}>
-        <button type="button" onClick={() => directRead(inputValue)} disabled={!inputValue.trim()} className="btn btn-secondary" style={{ width: "40px", height: "40px", borderRadius: "50%", padding: 0, minHeight: "auto" }}>🔊</button>
-        <input type="text" placeholder="Type a message..." value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !loading) handleSendMessage(); }} disabled={loading} style={{ flex: 1, fontSize: "14px", padding: "12px 16px", borderRadius: "24px" }} />
-        <button type="button" onClick={handleSendMessage} disabled={loading || !inputValue.trim()} className="btn btn-primary" style={{ width: "44px", height: "44px", borderRadius: "50%", padding: 0, minHeight: "auto" }}>
-          {loading ? "..." : "▶"}
-        </button>
+          <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+            <button
+              onClick={() => setShowMemory(true)}
+              style={{
+                padding: "7px 11px",
+                borderRadius: "11px",
+                background: "rgba(139,92,246,0.18)",
+                border: "1px solid rgba(139,92,246,0.45)",
+                color: "#fff",
+                fontSize: "11px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              🧠 {memories.length}
+            </button>
+            <button
+              onClick={() => setShowNameInput(true)}
+              style={{
+                padding: "7px 11px",
+                borderRadius: "11px",
+                background: "rgba(139,92,246,0.18)",
+                border: "1px solid rgba(139,92,246,0.45)",
+                color: "#fff",
+                fontSize: "11px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              ✏️
+            </button>
+          </div>
+        </header>
+
+        {/* Character Switcher */}
+        <div style={{ position: "relative", marginBottom: "10px" }}>
+          <button
+            onClick={() => setShowCharacterMenu(!showCharacterMenu)}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 14px",
+              borderRadius: "14px",
+              background: "rgba(20,12,40,0.72)",
+              border: "1px solid rgba(139,92,246,0.5)",
+              color: "#fff",
+              cursor: "pointer",
+              backdropFilter: "blur(12px)",
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  display: "grid",
+                  placeItems: "center",
+                  background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                }}
+              >
+                {renderAvatar(selectedCharacter, 32)}
+              </span>
+              <span style={{ fontSize: "13px", fontWeight: 700 }}>{displayName}</span>
+            </span>
+            <span style={{ fontSize: "11px" }}>{showCharacterMenu ? "▲" : "▼"}</span>
+          </button>
+
+          {showCharacterMenu && (
+            <div
+              className="glass"
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                marginTop: "4px",
+                borderRadius: "14px",
+                padding: "6px",
+                zIndex: 100,
+              }}
+            >
+              {characters.map((c) => {
+                const isSelected = selectedCharacter === c.id;
+                const cName = customNames[c.id] || c.name;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      setSelectedCharacter(c.id);
+                      setShowCharacterMenu(false);
+                      setMessages([
+                        {
+                          id: Date.now().toString(),
+                          text: `Hi! I'm ${cName}. ${c.subtitle}. How can I help you?`,
+                          sender: "ai",
+                          timestamp: new Date(),
+                        },
+                      ]);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "9px 10px",
+                      borderRadius: "10px",
+                      background: isSelected
+                        ? "linear-gradient(135deg, rgba(255,45,149,0.3), rgba(139,92,246,0.3))"
+                        : "transparent",
+                      border: "none",
+                      color: "#fff",
+                      fontSize: "12px",
+                      fontWeight: isSelected ? 700 : 500,
+                      cursor: "pointer",
+                      textAlign: "left",
+                      display: "flex",
+                      gap: "10px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        display: "grid",
+                        placeItems: "center",
+                        background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {renderAvatar(c.id, 30)}
+                    </span>
+                    <div>
+                      <div>{cName}</div>
+                      <div style={{ fontSize: "10px", color: "var(--muted)", marginTop: "1px" }}>
+                        {c.subtitle}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Chat Area */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            paddingRight: "2px",
+            paddingBottom: "8px",
+          }}
+        >
+          {messages.map((m) => (
+            <div
+              key={m.id}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: m.sender === "user" ? "flex-end" : "flex-start",
+              }}
+            >
+              <div
+                className={m.sender === "user" ? "bubble-user" : "bubble-ai"}
+                style={{
+                  maxWidth: "82%",
+                  padding: "10px 14px",
+                  fontSize: "13px",
+                  lineHeight: 1.5,
+                  wordWrap: "break-word",
+                  whiteSpace: "pre-wrap",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                }}
+              >
+                {m.text || (loading && m.sender === "ai" ? "● ● ●" : "")}
+              </div>
+
+              {m.sender === "ai" && m.text && !loading && (
+                <div style={{ display: "flex", gap: "5px", marginTop: "5px" }}>
+                  <button
+                    onClick={() => directRead(m.text)}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "8px",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      background: "rgba(139,92,246,0.22)",
+                      border: "1px solid rgba(139,92,246,0.5)",
+                      color: "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    🔊 Read
+                  </button>
+                  <button
+                    onClick={stopReading}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "8px",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      background: "rgba(239,68,68,0.22)",
+                      border: "1px solid rgba(239,68,68,0.5)",
+                      color: "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ⏹ Stop
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input area */}
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            alignItems: "center",
+            padding: "8px 0 12px",
+          }}
+        >
+          <button
+            onClick={() => directRead(inputValue)}
+            disabled={!inputValue.trim()}
+            style={{
+              width: "42px",
+              height: "42px",
+              borderRadius: "50%",
+              padding: 0,
+              flexShrink: 0,
+              background: "rgba(139,92,246,0.22)",
+              border: "1px solid rgba(139,92,246,0.5)",
+              color: "#fff",
+              fontSize: "17px",
+              cursor: inputValue.trim() ? "pointer" : "not-allowed",
+              opacity: inputValue.trim() ? 1 : 0.5,
+            }}
+          >
+            🎙️
+          </button>
+          <input
+            type="text"
+            placeholder="Type a message..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !loading) handleSendMessage();
+            }}
+            disabled={loading}
+            style={{
+              flex: 1,
+              fontSize: "13px",
+              padding: "11px 16px",
+              borderRadius: "22px",
+              background: "rgba(15,8,30,0.85)",
+              border: "1px solid rgba(139,92,246,0.5)",
+              color: "#fff",
+              outline: "none",
+            }}
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={loading || !inputValue.trim()}
+            style={{
+              width: "46px",
+              height: "46px",
+              borderRadius: "50%",
+              padding: 0,
+              flexShrink: 0,
+              background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+              color: "#fff",
+              fontSize: "18px",
+              border: "none",
+              cursor: loading || !inputValue.trim() ? "not-allowed" : "pointer",
+              opacity: loading || !inputValue.trim() ? 0.5 : 1,
+              boxShadow: "0 6px 20px rgba(255,45,149,0.45)",
+            }}
+          >
+            {loading ? "…" : "➤"}
+          </button>
+        </div>
       </div>
 
       {/* Name Modal */}
       {showNameInput && (
         <div className="modal-overlay" onClick={() => setShowNameInput(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "16px" }}>Change Name</h3>
-            <p style={{ color: "var(--muted)", fontSize: "13px", marginBottom: "16px" }}>Current: <strong style={{ color: "#fff" }}>{displayName}</strong></p>
-            <input type="text" value={nameInputValue} onChange={(e) => setNameInputValue(e.target.value)} placeholder="New name..." style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", marginBottom: "16px" }} />
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button onClick={saveCustomName} className="btn btn-primary" style={{ flex: 1, padding: "12px" }}>✅ Save</button>
-              <button onClick={resetCustomName} className="btn btn-secondary" style={{ flex: 1, padding: "12px" }}>🔄 Reset</button>
+            <h3 style={{ color: "#fff", fontSize: "16px", marginBottom: "12px" }}>Change Name</h3>
+            <p style={{ color: "var(--muted)", fontSize: "12px", marginBottom: "12px" }}>
+              Current: <strong style={{ color: "#fff" }}>{displayName}</strong>
+            </p>
+            <input
+              type="text"
+              value={nameInputValue}
+              onChange={(e) => setNameInputValue(e.target.value)}
+              placeholder="New name..."
+              style={{ width: "100%", padding: "10px 14px", borderRadius: "12px", marginBottom: "12px" }}
+            />
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={saveCustomName} className="btn btn-primary" style={{ flex: 1, padding: "10px" }}>✅ Save</button>
+              <button onClick={resetCustomName} className="btn btn-secondary" style={{ flex: 1, padding: "10px" }}>🔄 Reset</button>
             </div>
           </div>
         </div>
@@ -354,19 +704,46 @@ export default function ChatPage() {
       {showPhotoMenu && (
         <div className="modal-overlay" onClick={() => setShowPhotoMenu(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "16px" }}>📷 {displayName}-র ছবি</h3>
+            <h3 style={{ color: "#fff", fontSize: "16px", marginBottom: "12px" }}>📷 {displayName}-র ছবি</h3>
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoUpload} />
-            <div style={{ width: "120px", height: "120px", borderRadius: "50%", margin: "0 auto 20px", overflow: "hidden", background: "linear-gradient(135deg, #FF2D95, #8B5CF6)", display: "grid", placeItems: "center", border: "3px solid rgba(255,255,255,0.2)", boxShadow: "0 0 30px rgba(255,45,149,0.5)" }}>
-              {renderPhoto(selectedCharacter, 120)}
+            <div
+              style={{
+                width: "110px",
+                height: "110px",
+                borderRadius: "50%",
+                margin: "0 auto 16px",
+                overflow: "hidden",
+                background: "linear-gradient(135deg, #FF2D95, #8B5CF6)",
+                display: "grid",
+                placeItems: "center",
+                border: "3px solid rgba(255,255,255,0.2)",
+                boxShadow: "0 0 25px rgba(255,45,149,0.5)",
+              }}
+            >
+              {renderAvatar(selectedCharacter, 110)}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "16px" }}>
-              <button onClick={() => fileInputRef.current?.click()} className="btn btn-primary" style={{ padding: "14px" }}>📁 Upload</button>
-              <button onClick={handleResetPhoto} className="btn btn-secondary" style={{ padding: "14px" }}>🔄 Reset</button>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "12px" }}>
+              <button onClick={() => fileInputRef.current?.click()} className="btn btn-primary" style={{ padding: "10px" }}>📁 Upload</button>
+              <button onClick={handleResetPhoto} className="btn btn-secondary" style={{ padding: "10px" }}>🔄 Reset</button>
             </div>
-            <p style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "12px", textAlign: "center" }}>অথবা Emoji বেছে নিন</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center", marginBottom: "16px" }}>
+            <p style={{ fontSize: "11px", color: "var(--muted)", marginBottom: "10px", textAlign: "center" }}>অথবা Emoji বেছে নিন</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" }}>
               {emojiOptions.map((emoji) => (
-                <button key={emoji} onClick={() => handleEmojiSelect(emoji)} style={{ width: "44px", height: "44px", borderRadius: "50%", background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.35)", fontSize: "22px", cursor: "pointer" }}>{emoji}</button>
+                <button
+                  key={emoji}
+                  onClick={() => handleEmojiSelect(emoji)}
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "50%",
+                    background: "rgba(139,92,246,0.15)",
+                    border: "1px solid rgba(139,92,246,0.35)",
+                    fontSize: "20px",
+                    cursor: "pointer",
+                  }}
+                >
+                  {emoji}
+                </button>
               ))}
             </div>
           </div>
@@ -377,27 +754,55 @@ export default function ChatPage() {
       {showMemory && (
         <div className="modal-overlay" onClick={() => setShowMemory(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ color: "#fff", fontSize: "18px", marginBottom: "8px" }}>🧠 {displayName}-র Memory</h3>
-            <p style={{ color: "var(--muted)", fontSize: "12px", marginBottom: "16px" }}>Total: {memories.length} items</p>
+            <h3 style={{ color: "#fff", fontSize: "16px", marginBottom: "6px" }}>🧠 {displayName}-র Memory</h3>
+            <p style={{ color: "var(--muted)", fontSize: "11px", marginBottom: "12px" }}>Total: {memories.length} items</p>
             {memories.length === 0 ? (
-              <p style={{ color: "var(--muted)", fontSize: "13px", textAlign: "center", padding: "20px" }}>কোনো মেমোরি নেই।<br />"সেভ করো" বলে কিছু লিখুন।</p>
+              <p style={{ color: "var(--muted)", fontSize: "12px", textAlign: "center", padding: "16px" }}>
+                কোনো মেমোরি নেই।
+                <br />
+                "সেভ করো" বলে কিছু লিখুন।
+              </p>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px", maxHeight: "300px", overflowY: "auto" }}>
                 {memories.map((m) => (
-                  <div key={m.id} style={{ padding: "10px 12px", borderRadius: "10px", background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                  <div
+                    key={m.id}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: "10px",
+                      background: "rgba(139,92,246,0.15)",
+                      border: "1px solid rgba(139,92,246,0.3)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
                     <div style={{ flex: 1 }}>
-                      <p style={{ color: "#fff", fontSize: "13px" }}>{m.text}</p>
-                      <p style={{ color: "var(--muted)", fontSize: "10px", marginTop: "4px" }}>{m.date}</p>
+                      <p style={{ color: "#fff", fontSize: "12px", margin: 0 }}>{m.text}</p>
+                      <p style={{ color: "var(--muted)", fontSize: "9px", margin: "3px 0 0" }}>{m.date}</p>
                     </div>
-                    <button onClick={() => deleteMemory(m.id)} style={{ padding: "4px 8px", borderRadius: "6px", background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444" }}>🗑️</button>
+                    <button
+                      onClick={() => deleteMemory(m.id)}
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        background: "rgba(239,68,68,0.2)",
+                        border: "1px solid rgba(239,68,68,0.4)",
+                        color: "#ef4444",
+                        cursor: "pointer",
+                      }}
+                    >
+                      🗑️
+                    </button>
                   </div>
                 ))}
               </div>
             )}
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button onClick={() => setShowMemory(false)} className="btn btn-primary" style={{ flex: 1, padding: "12px" }}>Close</button>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={() => setShowMemory(false)} className="btn btn-primary" style={{ flex: 1, padding: "10px" }}>Close</button>
               {memories.length > 0 && (
-                <button onClick={clearAllMemory} className="btn btn-secondary" style={{ flex: 1, padding: "12px", color: "#ef4444" }}>🗑️ Clear All</button>
+                <button onClick={clearAllMemory} className="btn btn-secondary" style={{ flex: 1, padding: "10px", color: "#ef4444" }}>🗑️ Clear All</button>
               )}
             </div>
           </div>
