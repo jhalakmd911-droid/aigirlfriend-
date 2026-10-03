@@ -33,8 +33,8 @@ const characters: Character[] = [
   { id: "jan", name: "Jan", icon: "💫", subtitle: "Girlfriend & Assistant", defaultPhoto: "/images/Jan-ai-generated-8285212.jpg" },
   { id: "lily", name: "Lily", icon: "💼", subtitle: "Business Manager", defaultPhoto: "/images/Lily_yacuzzi-ai-8455080.png" },
   { id: "emma", name: "Emma", icon: "💕", subtitle: "Romantic Girlfriend", defaultPhoto: "/images/Emma-stuff-ai-generated-8494624.jpg" },
-  { id: "mira", name: "Mira", icon: "🤖", subtitle: "Personal Assistant", defaultPhoto: "/images/Mira-ai-8612900.jpg" }, // ✅ javed -> mira
-  { id: "nadia", name: "Nadia", icon: "✨", subtitle: "Creative & Social", defaultPhoto: "/images/Nadia007-ai-generated-8822022.jpg" }, // ✅ ayat -> nadia
+  { id: "mira", name: "Mira", icon: "🤖", subtitle: "Personal Assistant", defaultPhoto: "/images/Mira-ai-8612900.jpg" },
+  { id: "nadia", name: "Nadia", icon: "✨", subtitle: "Creative & Social", defaultPhoto: "/images/Nadia007-ai-generated-8822022.jpg" },
 ];
 
 const emojiOptions = ["💫", "💼", "💕", "🤖", "✨", "🌸", "🌙", "🎀", "🦋", "⭐", "🌟", "💐"];
@@ -120,10 +120,8 @@ export default function ChatPage() {
     return memories.slice(-20).map((m) => `- ${m.text}`).join("\n");
   };
 
-  // 👇👇👇 আপডেট করা handleSendMessage ফাংশন 👇👇👇
   const handleSendMessage = async () => {
     const text = inputValue.trim();
-
     if (!text || loading) return;
 
     const userMsg: Message = {
@@ -133,19 +131,13 @@ export default function ChatPage() {
       timestamp: new Date(),
     };
 
-    const historyForApi = [...messages, userMsg]
-      .map((message) => ({
-        role:
-          message.sender === "user"
-            ? "user"
-            : "assistant",
-        content: message.text,
-      }));
+    const historyForApi = [...messages, userMsg].map((message) => ({
+      role: message.sender === "user" ? "user" : "assistant",
+      content: message.text,
+    }));
 
     const memoryContext = buildMemoryContext();
-
     const aiMsgId = `${Date.now()}-ai`;
-
     const aiMsg: Message = {
       id: aiMsgId,
       text: "",
@@ -153,108 +145,61 @@ export default function ChatPage() {
       timestamp: new Date(),
     };
 
-    setMessages((previous) => [
-      ...previous,
-      userMsg,
-      aiMsg,
-    ]);
-
+    setMessages((previous) => [...previous, userMsg, aiMsg]);
     setInputValue("");
     setLoading(true);
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-        },
-
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: historyForApi,
           character: selectedCharacter,
-          customName:
-            customNames[selectedCharacter] || "",
+          customName: customNames[selectedCharacter] || "",
           memoryContext,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({}));
-
-        throw new Error(
-          errorData?.error ||
-            `Chat request failed (${response.status})`
-        );
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData?.error || `Chat request failed (${response.status})`);
       }
 
       if (!response.body) {
-        throw new Error(
-          "The server returned no response stream."
-        );
+        throw new Error("The server returned no response stream.");
       }
 
-      const reader =
-        response.body.getReader();
-
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
-
       let buffer = "";
       let fullText = "";
 
       while (true) {
-        const { done, value } =
-          await reader.read();
-
+        const { done, value } = await reader.read();
         if (done) break;
 
-        buffer += decoder.decode(value, {
-          stream: true,
-        });
-
+        buffer += decoder.decode(value, { stream: true });
         const events = buffer.split("\n\n");
-
         buffer = events.pop() || "";
 
         for (const event of events) {
           const lines = event.split("\n");
-
           for (const line of lines) {
-            if (!line.startsWith("data:")) {
-              continue;
-            }
+            if (!line.startsWith("data:")) continue;
 
-            const data = line
-              .slice(5)
-              .trim();
-
-            if (!data || data === "[DONE]") {
-              continue;
-            }
+            const data = line.slice(5).trim();
+            if (!data || data === "[DONE]") continue;
 
             try {
               const parsed = JSON.parse(data);
+              const delta = parsed?.choices?.[0]?.delta?.content;
 
-              const delta =
-                parsed?.choices?.[0]?.delta
-                  ?.content;
-
-              if (
-                typeof delta === "string" &&
-                delta.length > 0
-              ) {
+              if (typeof delta === "string" && delta.length > 0) {
                 fullText += delta;
-
                 setMessages((previous) =>
                   previous.map((message) =>
-                    message.id === aiMsgId
-                      ? {
-                          ...message,
-                          text: fullText,
-                        }
-                      : message
+                    message.id === aiMsgId ? { ...message, text: fullText } : message
                   )
                 );
               }
@@ -266,40 +211,24 @@ export default function ChatPage() {
       }
 
       if (!fullText.trim()) {
-        throw new Error(
-          "The AI returned an empty response."
-        );
+        throw new Error("The AI returned an empty response.");
       }
 
       if (isSaveCommand(text)) {
         saveMemory(text);
       }
     } catch (error) {
-      console.error(
-        "Chat request error:",
-        error
-      );
-
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Something went wrong.";
-
+      console.error("Chat request error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Something went wrong.";
       setMessages((previous) =>
         previous.map((message) =>
-          message.id === aiMsgId
-            ? {
-                ...message,
-                text: `⚠️ ${errorMessage}`,
-              }
-            : message
+          message.id === aiMsgId ? { ...message, text: `⚠️ ${errorMessage}` } : message
         )
       );
     } finally {
       setLoading(false);
     }
   };
-  // 👆👆👆 handleSendMessage ফাংশন শেষ 👆👆👆
 
   const directRead = (text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) { alert("TTS not supported"); return; }
@@ -418,11 +347,32 @@ export default function ChatPage() {
           width: "100%",
           maxWidth: "480px",
           margin: "0 auto",
-          padding: "60px 12px 0", // ✅ এখানে 10px থেকে 60px করা হলো
+          padding: "50px 12px 0", // ✅ এখানে 50px করা হলো, যাতে উপরের নচ/স্ট্যাটাস বারের সাথে ওভারল্যাপ না হয়
           boxSizing: "border-box",
         }}
       >
-        {/* ❌ লোকাল Home Button টি মুছে ফেলা হলো */}
+        {/* ✅ লোকাল Home Button আবার ফিরিয়ে আনা হলো */}
+        <button
+          onClick={() => { if (typeof window !== "undefined") window.history.back(); }}
+          style={{
+            alignSelf: "flex-start",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "6px 12px",
+            borderRadius: "999px",
+            background: "rgba(20,12,40,0.72)",
+            border: "1px solid rgba(139,92,246,0.55)",
+            color: "#fff",
+            fontSize: "11px",
+            fontWeight: 700,
+            cursor: "pointer",
+            marginBottom: "8px",
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          ← Home
+        </button>
 
         {/* Header — NO BOX, floats over photo */}
         <header
