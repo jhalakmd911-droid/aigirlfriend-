@@ -1,21 +1,24 @@
-// app/api/chat/route.ts
 import { NextResponse } from 'next/server';
-
-// আপনার characterKnowledge ফাইলটি থেকে ফাংশনটি ইমপোর্ট করা হচ্ছে
-// যদি নিচের লাইনটি এরর দেয়, তবে নিচের "ধাপ ৩" দেখুন
-import { getOfflineResponse } from '../../../lib/characterKnowledge'; // সরাসরি রিলেটিভ পাথ
+import { getOfflineResponse } from '../../../lib/characterKnowledge';
 
 export async function POST(req: Request) {
+  // ট্রাই ব্লকের বাইরে ডিক্লেয়ার করা হলো, যাতে ক্যাচ ব্লকে ব্যবহার করা যায়
+  let characterId = "jan"; 
+  let lastMessage = "";
+
   try {
     const body: any = await req.json();
     const messages = body.messages || [];
-    const characterId = body.characterId || "jan";
+    characterId = body.characterId || "jan";
+
+    if (messages.length > 0) {
+      lastMessage = messages[messages.length - 1].content;
+    }
 
     const apiKey = process.env.GROQ_API_KEY;
 
     // ১. যদি API Key না থাকে, অফলাইন রেসপন্স দিন
     if (!apiKey) {
-      const lastMessage = messages.length > 0 ? messages[messages.length - 1].content : "";
       const offlineReply = getOfflineResponse(characterId, lastMessage);
       return NextResponse.json({ reply: offlineReply, isOffline: true });
     }
@@ -34,7 +37,6 @@ export async function POST(req: Request) {
       })
     });
 
-    // ৩. যদি Rate Limit (429) বা অন্য কোনো এরর হয়
     if (!response.ok) {
       throw new Error(`Groq API Error`);
     }
@@ -43,17 +45,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ reply: data.choices[0].message.content, isOffline: false });
 
   } catch (error: any) {
-    // ৪. যেকোনো এরর হলে অফলাইন ব্রেইন কাজ করবে
-    console.log("API Error, using offline mode");
+    // ৩. এরর হলে অফলাইন ব্রেইন কাজ করবে
+    console.log("API Error, using offline mode:", error.message);
     
-    // বডি থেকে characterId বের করার চেষ্টা (ফেইল করলে 'jan' ডিফল্ট)
-    let charId = "jan";
-    try {
-       const b = await req.json(); // চেষ্টা করা হচ্ছে বডি আবার পড়তে
-       if (b && b.characterId) charId = b.characterId;
-    } catch(e) {}
-
-    const fallbackReply = getOfflineResponse(charId, "Fallback");
+    // আর req.json() পড়ার দরকার নেই, characterId আগেই বের করা হয়েছে
+    const fallbackReply = getOfflineResponse(characterId, "Fallback");
     
     return NextResponse.json({ 
       reply: fallbackReply, 
