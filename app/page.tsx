@@ -1,66 +1,162 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
+import Sidebar from "@/components/Sidebar";
+import OnboardingPage from "@/components/pages/OnboardingPage";
+import CharacterSelectPage from "@/components/pages/CharacterSelectPage";
+import HomePage from "@/components/pages/HomePage";
+import ChatPage from "@/components/pages/ChatPage";
+import VoicePage from "@/components/pages/VoicePage";
+import UpdatePage from "@/components/pages/UpdatePage";
+import SecurityPage from "@/components/pages/SecurityPage";
+import ProfilePage from "@/components/pages/ProfilePage";
+import PhotosPage from "@/components/pages/PhotosPage";
+import MemoryPage from "@/components/pages/MemoryPage";
+import SettingsPage from "@/components/pages/SettingsPage";
 
-export default function HomePage() {
-  const features = [
-    { name: "Chat", icon: "💬", path: "/chat", desc: "Talk to your AI" },
-    { name: "Memory", icon: "🧠", path: "/memory", desc: "Saved memories" },
-    { name: "Photos", icon: "📸", path: "/photos", desc: "Character photos" },
-    { name: "Settings", icon: "⚙️", path: "/settings", desc: "App settings" },
-    { name: "Update", icon: "🔄", path: "/update", desc: "Update character" },
-  ];
+const mobileNavItems = [
+  { id: "chat", label: "Chat", icon: "♡" },
+  { id: "voice", label: "Voice", icon: "◉" },
+  { id: "photos", label: "Photos", icon: "🖼️" },
+  { id: "memory", label: "Memory", icon: "🧠" },
+  { id: "settings", label: "Settings", icon: "⚙️" },
+];
+
+export default function Home() {
+  const [appState, setAppState] = useState<"onboarding" | "characterSelect" | "main">("onboarding");
+  const [activeTab, setActiveTab] = useState("home");
+  const [profileChar, setProfileChar] = useState<string | null>(null);
+
+  const handleNavigate = (tab: string, characterId?: string) => {
+    setActiveTab(tab);
+  };
+
+  const goHome = () => {
+    setProfileChar(null);
+    setActiveTab("home");
+  };
+
+  if (appState === "onboarding") {
+    return <OnboardingPage onGetStarted={() => setAppState("characterSelect")} />;
+  }
+
+  if (appState === "characterSelect") {
+    return (
+      <CharacterSelectPage
+        onSelect={(charId) => {
+          setProfileChar(null);
+          setActiveTab("home");
+          setAppState("main");
+        }}
+        onBack={() => setAppState("main")}
+      />
+    );
+  }
+
+  const renderPage = () => {
+    if (profileChar) {
+      return (
+        <ProfilePage
+          characterId={profileChar}
+          onNavigate={(tab, charId) => {
+            setProfileChar(null);
+            handleNavigate(tab, charId);
+          }}
+          onBack={() => setProfileChar(null)}
+        />
+      );
+    }
+
+    switch (activeTab) {
+      case "chat":
+        return <ChatPage />;
+      case "voice":
+        return <VoicePage />;
+      case "security":
+        return <SecurityPage onBack={goHome} />;
+      case "update":
+        return <UpdatePage />;
+      case "photos":
+        return <PhotosPage />;
+      case "memory":
+        return <MemoryPage />;
+      case "settings":
+        return <SettingsPage onNavigate={handleNavigate} />;
+
+      // ✅ নতুন: Character Select পেজ
+      case "character":
+        return (
+          <CharacterSelectPage
+            onSelect={(charId) => {
+              setProfileChar(null);
+              setActiveTab("home");
+            }}
+            onBack={goHome}
+          />
+        );
+
+      case "home":
+      default:
+        return (
+          <HomePage
+            onNavigate={handleNavigate}
+            onOpenProfile={setProfileChar}
+          />
+        );
+    }
+  };
+
+  const showHomeButton = activeTab !== "home" || profileChar !== null;
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#05030d", color: "#fff", padding: "24px 16px", fontFamily: "sans-serif" }}>
-      <div style={{ maxWidth: "480px", margin: "0 auto" }}>
-        
-        {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "32px", marginTop: "20px" }}>
-          <h1 style={{ fontSize: "28px", fontWeight: 800, background: "linear-gradient(135deg, #FF2D95, #8B5CF6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: "8px" }}>
-            AI Girlfriend
-          </h1>
-          <p style={{ color: "#a78bfa", fontSize: "13px" }}>Your personal AI companion</p>
-        </div>
+    <div className="app-layout">
+      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-        {/* Feature Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-          {features.map((f) => (
-            <Link key={f.name} href={f.path} style={{ textDecoration: "none" }}>
-              <div style={{ 
-                background: "rgba(20,12,40,0.8)", 
-                border: "1px solid rgba(139,92,246,0.3)", 
-                borderRadius: "16px", 
-                padding: "20px 16px", 
-                textAlign: "center",
-                backdropFilter: "blur(12px)",
-                transition: "all 0.2s",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.4)"
-              }}>
-                <div style={{ fontSize: "32px", marginBottom: "10px" }}>{f.icon}</div>
-                <h3 style={{ fontSize: "15px", fontWeight: 700, marginBottom: "4px", color: "#fff" }}>{f.name}</h3>
-                <p style={{ fontSize: "11px", color: "#a78bfa", margin: 0 }}>{f.desc}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+      <main className="main-content">
+        {showHomeButton && (
+          <button
+            onClick={goHome}
+            className="btn btn-secondary"
+            style={{
+              position: "fixed",
+              top: "16px",
+              left: "16px",
+              zIndex: 200,
+              padding: "8px 14px",
+              borderRadius: "12px",
+              fontSize: "13px",
+              minHeight: "auto",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              background: "rgba(20, 12, 40, 0.9)",
+              backdropFilter: "blur(18px)",
+              border: "1px solid rgba(139, 92, 246, 0.5)",
+              boxShadow: "0 0 18px rgba(255, 45, 149, 0.25)",
+            }}
+          >
+            ← Home
+          </button>
+        )}
 
-        {/* Chat Button */}
-        <Link href="/chat" style={{ textDecoration: "none" }}>
-          <div style={{ 
-            marginTop: "24px", 
-            background: "linear-gradient(135deg, #FF2D95, #8B5CF6)", 
-            borderRadius: "16px", 
-            padding: "18px", 
-            textAlign: "center",
-            boxShadow: "0 6px 24px rgba(255,45,149,0.4)"
-          }}>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, margin: 0 }}>💬 Start Chatting</h2>
-            <p style={{ fontSize: "12px", margin: "4px 0 0", opacity: 0.9 }}>Talk to Jan, Lily, Emma & more</p>
-          </div>
-        </Link>
+        {renderPage()}
+      </main>
 
-      </div>
+      <nav className="mobile-bottom-nav">
+        {mobileNavItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => {
+              setProfileChar(null);
+              setActiveTab(item.id);
+            }}
+            className={`mobile-nav-item ${activeTab === item.id ? "active" : ""}`}
+          >
+            <span className="mobile-nav-icon">{item.icon}</span>
+            <span className="mobile-nav-label">{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
