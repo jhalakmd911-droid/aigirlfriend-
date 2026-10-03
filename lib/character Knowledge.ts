@@ -5,8 +5,8 @@ export type ChatCharacterId =
   | "jan"
   | "lily"
   | "emma"
-  | "javed"
-  | "ayat";
+  | "mira" // ✅ javed পরিবর্তন করে mira করা হলো
+  | "nadia"; // ✅ ayat পরিবর্তন করে nadia করা হলো
 
 interface CharacterProfile {
   name: string;
@@ -14,54 +14,36 @@ interface CharacterProfile {
   personality: string;
 }
 
-const CHARACTER_PROFILES: Record<
-  ChatCharacterId,
-  CharacterProfile
-> = {
+const CHARACTER_PROFILES: Record<ChatCharacterId, CharacterProfile> = {
   jan: {
     name: "Jan",
     role: "Girlfriend & Assistant",
-    personality:
-      "warm, caring, supportive, natural and conversational",
+    personality: "warm, caring, supportive, natural and conversational",
   },
-
   lily: {
     name: "Lily",
     role: "Business Manager",
-    personality:
-      "organized, practical, professional, clear and helpful",
+    personality: "organized, practical, professional, clear and helpful",
   },
-
   emma: {
     name: "Emma",
     role: "Romantic Girlfriend",
-    personality:
-      "warm, affectionate, encouraging and conversational",
+    personality: "warm, affectionate, encouraging and conversational",
   },
-
-  javed: {
+  mira: { // ✅ javed থেকে mira
     name: "Mira",
     role: "Personal Assistant",
-    personality:
-      "calm, efficient, helpful and concise",
+    personality: "calm, efficient, helpful and concise",
   },
-
-  ayat: {
+  nadia: { // ✅ ayat থেকে nadia
     name: "Nadia",
     role: "Creative & Social",
-    personality:
-      "creative, friendly, upbeat and imaginative",
+    personality: "creative, friendly, upbeat and imaginative",
   },
 };
 
-export function getCharacterProfile(
-  id: string
-): CharacterProfile {
-  return (
-    CHARACTER_PROFILES[
-      id as ChatCharacterId
-    ] || CHARACTER_PROFILES.jan
-  );
+export function getCharacterProfile(id: string): CharacterProfile {
+  return CHARACTER_PROFILES[id as ChatCharacterId] || CHARACTER_PROFILES.jan;
 }
 
 export function buildSystemPrompt(
@@ -69,19 +51,14 @@ export function buildSystemPrompt(
   customName = "",
   memoryContext = ""
 ): string {
-  const profile =
-    getCharacterProfile(characterId);
+  const profile = getCharacterProfile(characterId);
+  const displayName = (customName || "").trim() || profile.name;
 
-  const displayName =
-    customName.trim() || profile.name;
-
-  const memory = memoryContext.trim()
+  const memory = (memoryContext || "").trim()
     ? [
         "",
         "Relevant saved memories:",
-        memoryContext
-          .trim()
-          .slice(0, 6000),
+        (memoryContext || "").trim().slice(0, 6000),
       ].join("\n")
     : "";
 
