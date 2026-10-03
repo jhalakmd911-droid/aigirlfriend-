@@ -106,7 +106,7 @@ export default function Home() {
     }
   };
 
-  const showHomeButton = (activeTab !== "home" && activeTab !== "chat" && activeTab !== "voice") || profileChar !== null;
+const showHomeButton = activeTab !== "home" || profileChar !== null;
 
   return (
     <div className="app-layout">
