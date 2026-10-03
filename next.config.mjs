@@ -24,4 +24,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig; // <--- এখানেই আগের ভুলটি ছিল
+export default nextConfig; // <--- এই লাইনটি সবচেয়ে জরুরি
