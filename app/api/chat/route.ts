@@ -11,19 +11,44 @@ const characterPrompts: Record<string, string> = {
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
+function createOfflineStream(text: string): Response {
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      const words = text.split(" ");
+      for (const word of words) {
+        const chunk = `data: ${JSON.stringify({
+          choices: [{ delta: { content: word + " " } }],
+        })}\n\n`;
+        controller.enqueue(encoder.encode(chunk));
+        await new Promise((r) => setTimeout(r, 40));
+      }
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "X-Working-Model": "offline-brain",
+    },
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const { messages, character, customName, memoryContext } = await req.json();
     const apiKey = process.env.GROQ_API_KEY;
 
-    // Extract the latest user message for offline fallback
     const userMessages = (Array.isArray(messages) ? messages : []).filter(
       (m: any) => m.role === "user"
     );
     const lastUserMessage =
       userMessages[userMessages.length - 1]?.content || "";
 
-    // ✅ API key না থাকলে offline response দাও
     if (!apiKey) {
       const offlineText = getOfflineResponse(character, lastUserMessage);
       return createOfflineStream(offlineText);
@@ -59,7 +84,6 @@ export async function POST(req: Request) {
         }),
       });
 
-      // ✅ যদি rate limit বা এরর হয় — offline response
       if (!response.ok || !response.body) {
         const offlineText = getOfflineResponse(character, lastUserMessage);
         return createOfflineStream(offlineText);
@@ -67,7 +91,7 @@ export async function POST(req: Request) {
 
       const stream = new ReadableStream({
         async start(controller) {
-          const reader = response!.body!.getReader();
+          const reader = response.body!.getReader();
           const decoder = new TextDecoder();
           const encoder = new TextEncoder();
           let buffer = "";
@@ -100,8 +124,8 @@ export async function POST(req: Request) {
             }
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
             controller.close();
-          } catch (err) {
-            controller.error(err);
+          } catch {
+            controller.close();
           }
         },
       });
@@ -114,41 +138,11 @@ export async function POST(req: Request) {
           "X-Working-Model": GROQ_MODEL,
         },
       });
-    } catch (fetchError) {
-      // ✅ fetch fail হলেও offline response
+    } catch {
       const offlineText = getOfflineResponse(character, lastUserMessage);
       return createOfflineStream(offlineText);
     }
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "Failed" }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
-}
-
-// Helper: offline text কে stream আকারে পাঠানো
-function createOfflineStream(text: string): Response {
-  const stream = new ReadableStream({
-    async start(controller) {
-      const encoder = new TextEncoder();
-      // Character by character ছোট ছোট chunk এ পাঠাই — যাতে typewriter effect আসে
-      const words = text.split(" ");
-      for (const word of words) {
-        const chunk = `data: ${JSON.stringify({
-          choices: [{ delta: { content: word + " " } }],
-        })}\n\n`;
-        controller.enqueue(encoder.encode(chunk));
-        await new Promise((r) => setTimeout(r, 50));
-      }
-      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-      controller.close();
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
-      "X-Working-Model": "offline-brain",
-    },
-  });
 }
