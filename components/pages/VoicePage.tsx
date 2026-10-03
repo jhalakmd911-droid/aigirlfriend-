@@ -389,9 +389,7 @@ export default function VoicePage() {
       <div style={{ position: "absolute", width: "280px", height: "280px", borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.22), transparent 70%)", bottom: "-40px", right: "-120px", zIndex: 0, pointerEvents: "none" }} />
 
       <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "480px", margin: "0 auto", padding: "6px 12px 0", boxSizing: "border-box", display: "flex", flexDirection: "column", height: "100%" }}>
-        <button onClick={() => { if (typeof window !== "undefined") window.history.back(); }} style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: "4px", padding: "5px 11px", borderRadius: "999px", background: "rgba(20,12,40,0.72)", border: "1px solid rgba(139,92,246,0.55)", color: "#fff", fontSize: "10px", fontWeight: 700, cursor: "pointer", marginBottom: "5px", backdropFilter: "blur(12px)" }}>← Home</button>
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "5px" }}>
+   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "5px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
             <div style={{ width: "38px", height: "38px", borderRadius: "50%", overflow: "hidden", background: "linear-gradient(135deg, #FF2D95, #8B5CF6)", border: "2px solid rgba(255,77,185,0.6)", boxShadow: "0 0 18px rgba(255,45,149,0.55)", flexShrink: 0 }}>{renderAvatar(selectedCharacter)}</div>
             <div style={{ minWidth: 0 }}>
