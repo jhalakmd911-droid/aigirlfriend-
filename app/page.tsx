@@ -91,6 +91,8 @@ export default function ChatPage() {
   const getCharacter = (): Character => characters.find((c) => c.id === selectedCharacter) || characters[0];
   const getDisplayName = (): string => customNames[selectedCharacter] || getCharacter().name;
 
+  // ✅ Fix: only use custom photo if it's a real uploaded image (data: URL)
+  // Otherwise always use the default character photo
   const getCharImage = (charId: string): string => {
     const custom = charPhotos[charId];
     if (custom && custom.startsWith("data:")) return custom;
