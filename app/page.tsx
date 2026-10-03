@@ -122,6 +122,7 @@ export default function ChatPage() {
 
   const handleSendMessage = async () => {
     const text = inputValue.trim();
+
     if (!text || loading) return;
 
     const userMsg: Message = {
@@ -131,10 +132,11 @@ export default function ChatPage() {
       timestamp: new Date(),
     };
 
-    const historyForApi = [...messages, userMsg].map((message) => ({
-      role: message.sender === "user" ? "user" : "assistant",
-      content: message.text,
-    }));
+    const historyForApi = [...messages, userMsg]
+      .map((message) => ({
+        role: message.sender === "user" ? "user" : "assistant",
+        content: message.text,
+      }));
 
     const memoryContext = buildMemoryContext();
     const aiMsgId = `${Date.now()}-ai`;
@@ -347,11 +349,11 @@ export default function ChatPage() {
           width: "100%",
           maxWidth: "480px",
           margin: "0 auto",
-          padding: "50px 12px 0", // ✅ এখানে 50px করা হলো, যাতে উপরের নচ/স্ট্যাটাস বারের সাথে ওভারল্যাপ না হয়
+          padding: "10px 12px 0", // ✅ এখানে আগের মতো 10px রাখা হলো
           boxSizing: "border-box",
         }}
       >
-        {/* ✅ লোকাল Home Button আবার ফিরিয়ে আনা হলো */}
+        {/* ✅ লোকাল Home Button আগের মতোই রাখা হলো */}
         <button
           onClick={() => { if (typeof window !== "undefined") window.history.back(); }}
           style={{
@@ -866,4 +868,4 @@ export default function ChatPage() {
       )}
     </div>
   );
-}
+}              
