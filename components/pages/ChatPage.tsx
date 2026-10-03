@@ -311,28 +311,6 @@ export default function ChatPage() {
           boxSizing: "border-box",
         }}
       >
-        {/* Home Button */}
-        <button
-          onClick={() => { if (typeof window !== "undefined") window.history.back(); }}
-          style={{
-            alignSelf: "flex-start",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "4px",
-            padding: "6px 12px",
-            borderRadius: "999px",
-            background: "rgba(20,12,40,0.72)",
-            border: "1px solid rgba(139,92,246,0.55)",
-            color: "#fff",
-            fontSize: "11px",
-            fontWeight: 700,
-            cursor: "pointer",
-            marginBottom: "8px",
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          ← Home
-        </button>
 
         {/* Header — NO BOX, floats over photo */}
         <header
