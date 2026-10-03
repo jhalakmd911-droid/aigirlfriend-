@@ -33,8 +33,8 @@ const characters: Character[] = [
   { id: "jan", name: "Jan", icon: "💫", subtitle: "Girlfriend & Assistant", defaultPhoto: "/images/Jan-ai-generated-8285212.jpg" },
   { id: "lily", name: "Lily", icon: "💼", subtitle: "Business Manager", defaultPhoto: "/images/Lily_yacuzzi-ai-8455080.png" },
   { id: "emma", name: "Emma", icon: "💕", subtitle: "Romantic Girlfriend", defaultPhoto: "/images/Emma-stuff-ai-generated-8494624.jpg" },
-  { id: "mira", name: "Mira", icon: "🤖", subtitle: "Personal Assistant", defaultPhoto: "/images/Mira-ai-8612900.jpg" },
-  { id: "nadia", name: "Nadia", icon: "✨", subtitle: "Creative & Social", defaultPhoto: "/images/Nadia007-ai-generated-8822022.jpg" },
+  { id: "javed", name: "Mira", icon: "🤖", subtitle: "Personal Assistant", defaultPhoto: "/images/Mira-ai-8612900.jpg" },
+  { id: "ayat", name: "Nadia", icon: "✨", subtitle: "Creative & Social", defaultPhoto: "/images/Nadia007-ai-generated-8822022.jpg" },
 ];
 
 const emojiOptions = ["💫", "💼", "💕", "🤖", "✨", "🌸", "🌙", "🎀", "🦋", "⭐", "🌟", "💐"];
@@ -122,32 +122,15 @@ export default function ChatPage() {
 
   const handleSendMessage = async () => {
     const text = inputValue.trim();
-
     if (!text || loading) return;
 
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      text,
-      sender: "user",
-      timestamp: new Date(),
-    };
-
-    const historyForApi = [...messages, userMsg]
-      .map((message) => ({
-        role: message.sender === "user" ? "user" : "assistant",
-        content: message.text,
-      }));
-
+    const userMsg: Message = { id: Date.now().toString(), text, sender: "user", timestamp: new Date() };
+    const historyForApi = [...messages, userMsg].map((m) => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text }));
     const memoryContext = buildMemoryContext();
-    const aiMsgId = `${Date.now()}-ai`;
-    const aiMsg: Message = {
-      id: aiMsgId,
-      text: "",
-      sender: "ai",
-      timestamp: new Date(),
-    };
+    const aiMsgId = (Date.now() + 1).toString();
+    const aiMsg: Message = { id: aiMsgId, text: "", sender: "ai", timestamp: new Date() };
 
-    setMessages((previous) => [...previous, userMsg, aiMsg]);
+    setMessages((prev) => [...prev, userMsg, aiMsg]);
     setInputValue("");
     setLoading(true);
 
@@ -155,78 +138,50 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: historyForApi,
-          character: selectedCharacter,
-          customName: customNames[selectedCharacter] || "",
-          memoryContext,
-        }),
+        body: JSON.stringify({ messages: historyForApi, character: selectedCharacter, customName: customNames[selectedCharacter] || "", memoryContext }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.error || `Chat request failed (${response.status})`);
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed");
       }
 
-      if (!response.body) {
-        throw new Error("The server returned no response stream.");
-      }
-
-      const reader = response.body.getReader();
+      const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let buffer = "";
       let fullText = "";
+      if (!reader) throw new Error("No stream");
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split("\n\n");
-        buffer = events.pop() || "";
-
-        for (const event of events) {
-          const lines = event.split("\n");
-          for (const line of lines) {
-            if (!line.startsWith("data:")) continue;
-
-            const data = line.slice(5).trim();
-            if (!data || data === "[DONE]") continue;
-
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n").filter((l) => l.trim() !== "");
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6);
+            if (data === "[DONE]") continue;
             try {
               const parsed = JSON.parse(data);
-              const delta = parsed?.choices?.[0]?.delta?.content;
-
-              if (typeof delta === "string" && delta.length > 0) {
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
                 fullText += delta;
-                setMessages((previous) =>
-                  previous.map((message) =>
-                    message.id === aiMsgId ? { ...message, text: fullText } : message
-                  )
-                );
+                setMessages((prev) => prev.map((m) => m.id === aiMsgId ? { ...m, text: fullText } : m));
               }
-            } catch {
-              // Ignore incomplete SSE chunks.
-            }
+            } catch (e) {}
           }
         }
       }
 
-      if (!fullText.trim()) {
-        throw new Error("The AI returned an empty response.");
+      if (!fullText) {
+        setMessages((prev) => prev.map((m) => m.id === aiMsgId ? { ...m, text: "Sorry, I couldn't respond." } : m));
       }
 
       if (isSaveCommand(text)) {
-        saveMemory(text);
+        const saveText = text.replace(/সেভ করো|মনে রাখো|রাখো|লিখে রাখো|save this|remember this|keep this|note this|don't forget/gi, "").replace(/^[,:\-\s]+/, "").trim();
+        if (saveText) saveMemory(saveText);
       }
-    } catch (error) {
-      console.error("Chat request error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Something went wrong.";
-      setMessages((previous) =>
-        previous.map((message) =>
-          message.id === aiMsgId ? { ...message, text: `⚠️ ${errorMessage}` } : message
-        )
-      );
+    } catch (err: any) {
+      setMessages((prev) => prev.map((m) => m.id === aiMsgId ? { ...m, text: "⚠️ " + (err.message || "Network error") } : m));
     } finally {
       setLoading(false);
     }
@@ -290,6 +245,7 @@ export default function ChatPage() {
     localStorage.removeItem(`memory_${selectedCharacter}`);
   };
 
+  // ✅ Always show character photo — never emoji
   const renderAvatar = (charId: string, size: number) => {
     return (
       <img
@@ -349,11 +305,11 @@ export default function ChatPage() {
           width: "100%",
           maxWidth: "480px",
           margin: "0 auto",
-          padding: "10px 12px 0", // ✅ এখানে আগের মতো 10px রাখা হলো
+          padding: "10px 12px 0",
           boxSizing: "border-box",
         }}
       >
-        {/* ✅ লোকাল Home Button আগের মতোই রাখা হলো */}
+        {/* Home Button */}
         <button
           onClick={() => { if (typeof window !== "undefined") window.history.back(); }}
           style={{
@@ -868,4 +824,4 @@ export default function ChatPage() {
       )}
     </div>
   );
-}              
+}
