@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { buildSystemPrompt } from "@/lib/character Knowledge";
+import { buildSystemPrompt } from "@/lib/characterKnowledge"; // ✅ স্পেস ঠিক করা হয়েছে
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-const DEFAULT_MODEL =
-  process.env.GROQ_MODEL || "openai/gpt-oss-20b";
+// ✅ সঠিক Groq মডেল বসানো হয়েছে
+const DEFAULT_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile"; 
 
 interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -73,6 +73,7 @@ export async function POST(request: Request) {
         ? body.memoryContext
         : "";
 
+    // ✅ buildSystemPrompt এখন ঠিকভাবে কাজ করবে
     const systemPrompt = buildSystemPrompt(
       character,
       customName,
@@ -119,7 +120,6 @@ export async function POST(request: Request) {
 
       try {
         const parsed = JSON.parse(errorText);
-
         errorMessage =
           parsed?.error?.message ||
           parsed?.error ||
