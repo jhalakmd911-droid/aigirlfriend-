@@ -1,104 +1,66 @@
-import { NextResponse } from "next/server";
-import { buildSystemPrompt } from "@/lib/characterKnowledge"; // স্পেস মুছে ফেলা হয়েছে
+"use client";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+import Link from "next/link";
 
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+export default function HomePage() {
+  const features = [
+    { name: "Chat", icon: "💬", path: "/chat", desc: "Talk to your AI" },
+    { name: "Memory", icon: "🧠", path: "/memory", desc: "Saved memories" },
+    { name: "Photos", icon: "📸", path: "/photos", desc: "Character photos" },
+    { name: "Settings", icon: "⚙️", path: "/settings", desc: "App settings" },
+    { name: "Update", icon: "🔄", path: "/update", desc: "Update character" },
+  ];
 
-// ভুল মডেল পরিবর্তন করে সঠিক মডেল বসানো হয়েছে
-const DEFAULT_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
-
-interface ChatMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
-}
-
-function isMessage(value: unknown): value is ChatMessage {
-  if (!value || typeof value !== "object") return false;
-  const message = value as Record<string, unknown>;
   return (
-    (message.role === "system" || message.role === "user" || message.role === "assistant") &&
-    typeof message.content === "string"
+    <div style={{ minHeight: "100dvh", background: "#05030d", color: "#fff", padding: "24px 16px", fontFamily: "sans-serif" }}>
+      <div style={{ maxWidth: "480px", margin: "0 auto" }}>
+        
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: "32px", marginTop: "20px" }}>
+          <h1 style={{ fontSize: "28px", fontWeight: 800, background: "linear-gradient(135deg, #FF2D95, #8B5CF6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: "8px" }}>
+            AI Girlfriend
+          </h1>
+          <p style={{ color: "#a78bfa", fontSize: "13px" }}>Your personal AI companion</p>
+        </div>
+
+        {/* Feature Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          {features.map((f) => (
+            <Link key={f.name} href={f.path} style={{ textDecoration: "none" }}>
+              <div style={{ 
+                background: "rgba(20,12,40,0.8)", 
+                border: "1px solid rgba(139,92,246,0.3)", 
+                borderRadius: "16px", 
+                padding: "20px 16px", 
+                textAlign: "center",
+                backdropFilter: "blur(12px)",
+                transition: "all 0.2s",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.4)"
+              }}>
+                <div style={{ fontSize: "32px", marginBottom: "10px" }}>{f.icon}</div>
+                <h3 style={{ fontSize: "15px", fontWeight: 700, marginBottom: "4px", color: "#fff" }}>{f.name}</h3>
+                <p style={{ fontSize: "11px", color: "#a78bfa", margin: 0 }}>{f.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* Chat Button */}
+        <Link href="/chat" style={{ textDecoration: "none" }}>
+          <div style={{ 
+            marginTop: "24px", 
+            background: "linear-gradient(135deg, #FF2D95, #8B5CF6)", 
+            borderRadius: "16px", 
+            padding: "18px", 
+            textAlign: "center",
+            boxShadow: "0 6px 24px rgba(255,45,149,0.4)"
+          }}>
+            <h2 style={{ fontSize: "18px", fontWeight: 800, margin: 0 }}>💬 Start Chatting</h2>
+            <p style={{ fontSize: "12px", margin: "4px 0 0", opacity: 0.9 }}>Talk to Jan, Lily, Emma & more</p>
+          </div>
+        </Link>
+
+      </div>
+    </div>
   );
-}
-
-export async function POST(request: Request) {
-  const apiKey = process.env.GROQ_API_KEY;
-
-  if (!apiKey) {
-    return NextResponse.json({ error: "GROQ_API_KEY is not configured." }, { status: 500 });
-  }
-
-  try {
-    const body = await request.json();
-    const incomingMessages = Array.isArray(body?.messages) ? body.messages : [];
-    const messages = incomingMessages.filter(isMessage).slice(-30);
-
-    if (messages.length === 0) {
-      return NextResponse.json({ error: "No chat messages were provided." }, { status: 400 });
-    }
-
-    const character = typeof body?.character === "string" ? body.character : "jan";
-    const customName = typeof body?.customName === "string" ? body.customName : "";
-    const memoryContext = typeof body?.memoryContext === "string" ? body.memoryContext : "";
-
-    // এই ফাংশনটি এখন lib/characterKnowledge.ts এ তৈরি করে দিচ্ছি
-    const systemPrompt = buildSystemPrompt(character, customName, memoryContext);
-
-    const groqMessages = [
-      { role: "system" as const, content: systemPrompt },
-      ...messages
-        .filter((message) => message.role !== "system")
-        .map((message) => ({
-          role: message.role as "user" | "assistant",
-          content: message.content.slice(0, 12000),
-        })),
-    ];
-
-    const upstream = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: groqMessages,
-        temperature: 0.7,
-        max_completion_tokens: 1024,
-        stream: true,
-      }),
-      cache: "no-store",
-    });
-
-    if (!upstream.ok) {
-      const errorText = await upstream.text();
-      let errorMessage = "Groq API request failed.";
-      try {
-        const parsed = JSON.parse(errorText);
-        errorMessage = parsed?.error?.message || parsed?.error || errorMessage;
-      } catch {
-        if (errorText) errorMessage = errorText.slice(0, 500);
-      }
-      return NextResponse.json({ error: errorMessage }, { status: upstream.status });
-    }
-
-    if (!upstream.body) {
-      return NextResponse.json({ error: "Groq returned an empty response." }, { status: 502 });
-    }
-
-    return new Response(upstream.body, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/event-stream; charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-      },
-    });
-  } catch (error) {
-    console.error("Chat API error:", error);
-    return NextResponse.json({ error: "Unable to process the chat request." }, { status: 500 });
-  }
 }
