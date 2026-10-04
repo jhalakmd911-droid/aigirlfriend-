@@ -148,8 +148,8 @@ export default function UpdatePage() {
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !uploadingFor) return;
-    if (file.size > 1024 * 1024) {
-      alert("ছবির সাইজ ১ MB এর কম হতে হবে");
+    if (file.size > 100 * 1024 * 1024) {
+      alert("ছবির সাইজ ১০০ MB এর কম হতে হবে");
       setUploadingFor(null);
       return;
     }
