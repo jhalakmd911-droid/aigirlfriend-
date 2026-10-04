@@ -36,8 +36,8 @@ export default function PhotosPage() {
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert("ছবির সাইজ ২ MB এর কম হতে হবে");
+    if (file.size > 100 * 1024 * 1024) {
+      alert("ছবির সাইজ ১০০ MB এর কম হতে হবে");
       return;
     }
     const reader = new FileReader();
