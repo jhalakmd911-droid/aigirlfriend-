@@ -168,11 +168,15 @@ export async function GET(request: Request) {
     let previewUrl = "";
     let logUrl = "";
     try {
-      const deps = await ghJson(
-        cfg.token,
-        `/repos/${cfg.repo}/deployments?ref=${PREVIEW_BRANCH}&per_page=10`
-      );
-      const dep = (deps as any[]).find((d) => d.sha === sha);
+      // Vercel may record the commit sha (not the branch name) as the deployment ref,
+      // so look up by sha first, then scan the most recent deployments.
+      let dep: any = null;
+      const bySha = await ghJson(cfg.token, `/repos/${cfg.repo}/deployments?sha=${sha}&per_page=10`);
+      dep = (bySha as any[])[0] || null;
+      if (!dep) {
+        const recent = await ghJson(cfg.token, `/repos/${cfg.repo}/deployments?per_page=30`);
+        dep = (recent as any[]).find((d) => d.sha === sha || d.ref === sha) || null;
+      }
       if (dep) {
         const sts = await ghJson(cfg.token, `/repos/${cfg.repo}/deployments/${dep.id}/statuses?per_page=5`);
         const latest = (sts as any[])[0];
